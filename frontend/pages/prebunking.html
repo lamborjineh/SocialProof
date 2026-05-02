@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="/env-config.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SocialProof — Prebunking Lab</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0d0f14; --surface:#13161e; --card:#181c27; --border:#252a3a;
+  --text:#e8eaf0; --muted:#6b7394;
+  --accent:#4f8ef7; --accent2:#a78bfa;
+  --green:#34d399; --red:#f87171; --orange:#fb923c; --yellow:#fbbf24;
+  --sidebar-w:256px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.5;}
+.grid-bg{position:fixed;inset:0;background-image:linear-gradient(rgba(79,142,247,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(79,142,247,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+
+/* ── SIDEBAR ── */
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);z-index:200;display:flex;flex-direction:column;transition:transform .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;overflow-x:hidden;}
+.sidebar.collapsed{transform:translateX(calc(-1 * var(--sidebar-w)));}
+.sidebar-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);z-index:190;opacity:0;pointer-events:none;transition:opacity .3s;}
+.sidebar-overlay.visible{opacity:1;pointer-events:all;}
+.sidebar-header{display:flex;align-items:center;justify-content:space-between;padding:1.25rem 1rem 1rem;border-bottom:1px solid var(--border);flex-shrink:0;}
+.sidebar-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.15rem;letter-spacing:-.02em;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-decoration:none;}
+.sidebar-logo span{font-weight:400;opacity:.55;-webkit-text-fill-color:rgba(232,234,240,.35);}
+.sidebar-close-btn{width:30px;height:30px;background:transparent;border:1px solid var(--border);border-radius:7px;cursor:pointer;color:var(--muted);display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;}
+.sidebar-close-btn:hover{border-color:var(--text);color:var(--text);}
+.sidebar-nav{display:flex;flex-direction:column;padding:.75rem .75rem 0;gap:2px;flex:1;}
+.nav-item{display:flex;align-items:center;gap:.7rem;padding:.6rem .75rem;border-radius:9px;color:var(--muted);text-decoration:none;font-size:.85rem;font-family:'DM Mono',monospace;letter-spacing:.02em;transition:all .2s;}
+.nav-item:hover{background:rgba(255,255,255,.04);color:var(--text);}
+.nav-item.active{background:rgba(79,142,247,.12);color:var(--accent);}
+.nav-item svg{width:16px;height:16px;flex-shrink:0;}
+.nav-divider{height:1px;background:var(--border);margin:.5rem 0;}
+.sidebar-section{padding:.75rem 1rem .3rem;font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;}
+.age-mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;padding:.3rem .75rem 1rem;}
+.age-pill{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:.5rem .3rem;cursor:pointer;color:var(--muted);font-size:.7rem;text-align:center;transition:all .2s;line-height:1.6;}
+.age-pill:hover{border-color:var(--accent);color:var(--accent);}
+.age-pill.active{background:rgba(79,142,247,.12);border-color:var(--accent);color:var(--accent);}
+.sidebar-user{border-top:1px solid var(--border);padding:.75rem 1rem;display:flex;align-items:center;justify-content:space-between;font-size:.8rem;color:var(--muted);}
+.sidebar-username{font-family:'DM Mono',monospace;font-size:.75rem;color:var(--text);}
+.logout-btn{background:transparent;border:1px solid var(--border);border-radius:6px;padding:.3rem .6rem;color:var(--muted);cursor:pointer;font-size:.7rem;transition:all .2s;}
+.logout-btn:hover{border-color:var(--red);color:var(--red);}
+.burger-btn{position:fixed;top:1rem;left:1rem;z-index:180;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:.55rem;cursor:pointer;color:var(--muted);display:flex;align-items:center;justify-content:center;transition:all .2s;display:none;}
+.burger-btn.visible{display:flex;}
+.burger-btn:hover{border-color:var(--accent);color:var(--accent);}
+
+/* ── MAIN ── */
+.main{margin-left:var(--sidebar-w);min-height:100vh;transition:margin-left .3s cubic-bezier(.4,0,.2,1);position:relative;z-index:1;}
+.main.expanded{margin-left:0;}
+.page{max-width:820px;margin:0 auto;padding:2rem 1.5rem 6rem;}
+
+/* ── PAGE HEADER ── */
+.page-header{padding:2rem 0 2.5rem;}
+.page-eyebrow{font-family:'DM Mono',monospace;font-size:.7rem;letter-spacing:.12em;color:var(--accent);text-transform:uppercase;margin-bottom:.6rem;}
+.page-title{font-family:'Syne',sans-serif;font-weight:800;font-size:2rem;letter-spacing:-.03em;line-height:1.15;}
+.page-sub{color:var(--muted);font-size:.9rem;margin-top:.5rem;max-width:520px;line-height:1.6;}
+
+/* ── PROGRESS TRACK ── */
+.progress-track{display:flex;gap:.4rem;margin-bottom:2.5rem;flex-wrap:wrap;}
+.prog-dot{flex:1;min-width:30px;height:5px;border-radius:99px;background:var(--border);transition:all .4s;}
+.prog-dot.done{background:var(--green);}
+.prog-dot.active{background:var(--accent);box-shadow:0 0 8px rgba(79,142,247,.4);}
+.prog-label{font-family:'DM Mono',monospace;font-size:.72rem;color:var(--muted);margin-bottom:.75rem;}
+.prog-label strong{color:var(--text);}
+
+/* ── TECHNIQUE LIST (left panel feel) ── */
+.techniques-grid{display:grid;grid-template-columns:1fr;gap:.5rem;margin-bottom:2rem;}
+.technique-chip{display:flex;align-items:center;gap:.8rem;padding:.65rem .9rem;background:var(--card);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all .2s;text-align:left;}
+.technique-chip:hover{border-color:var(--accent);background:rgba(79,142,247,.05);}
+.technique-chip.active-tech{border-color:var(--accent);background:rgba(79,142,247,.1);}
+.technique-chip.completed{border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.04);}
+.tech-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+.tech-name{font-size:.85rem;font-weight:500;color:var(--text);}
+.tech-sub{font-size:.73rem;color:var(--muted);}
+.tech-status{margin-left:auto;font-size:.65rem;font-family:'DM Mono',monospace;color:var(--muted);}
+.tech-status.done{color:var(--green);}
+
+/* ── MODULE CARD ── */
+.module-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.75rem;margin-bottom:1.5rem;animation:fadeUp .35s ease both;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+.phase-badge{display:inline-flex;align-items:center;gap:.4rem;font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;padding:.3rem .65rem;border-radius:6px;margin-bottom:1.1rem;}
+.phase-vaccine{background:rgba(167,139,250,.12);color:var(--accent2);border:1px solid rgba(167,139,250,.25);}
+.phase-exercise{background:rgba(251,191,36,.1);color:var(--yellow);border:1px solid rgba(251,191,36,.2);}
+.phase-result-correct{background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.2);}
+.phase-result-wrong{background:rgba(248,113,113,.1);color:var(--red);border:1px solid rgba(248,113,113,.2);}
+
+.module-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1.3rem;margin-bottom:.5rem;}
+.module-desc{color:var(--muted);font-size:.88rem;line-height:1.65;margin-bottom:1.5rem;}
+
+/* Vaccine example */
+.vaccine-label{font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--red);margin-bottom:.5rem;}
+.example-box{background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.2);border-radius:10px;padding:1rem 1.1rem;margin-bottom:1.25rem;position:relative;}
+.example-box.exercise-box{background:rgba(251,191,36,.04);border-color:rgba(251,191,36,.15);}
+.example-text{font-size:.9rem;line-height:1.6;font-style:italic;}
+.example-annotation{display:flex;gap:.5rem;margin-top:.8rem;flex-wrap:wrap;}
+.annotation-tag{font-family:'DM Mono',monospace;font-size:.65rem;padding:.2rem .5rem;border-radius:5px;background:rgba(248,113,113,.15);color:var(--red);}
+.why-box{background:rgba(79,142,247,.06);border:1px solid rgba(79,142,247,.15);border-radius:10px;padding:.9rem 1rem;margin-top:1rem;}
+.why-label{font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.1em;color:var(--accent);text-transform:uppercase;margin-bottom:.4rem;}
+.why-text{font-size:.83rem;color:var(--muted);line-height:1.6;}
+
+/* Options */
+.options-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin:1.2rem 0;}
+.option-btn{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.85rem 1rem;cursor:pointer;text-align:left;transition:all .2s;color:var(--text);}
+.option-btn:hover{border-color:var(--accent);background:rgba(79,142,247,.06);}
+.option-btn.selected{border-color:var(--accent);background:rgba(79,142,247,.1);}
+.option-btn.correct{border-color:var(--green);background:rgba(52,211,153,.1);color:var(--green);}
+.option-btn.wrong{border-color:var(--red);background:rgba(248,113,113,.08);color:var(--red);}
+.option-letter{font-family:'DM Mono',monospace;font-size:.65rem;color:var(--muted);margin-bottom:.3rem;}
+.option-name{font-size:.85rem;font-weight:500;}
+
+/* Result */
+.result-score{text-align:center;padding:1.5rem 0 1rem;}
+.result-icon{font-size:3rem;margin-bottom:.5rem;}
+.result-msg{font-family:'Syne',sans-serif;font-weight:700;font-size:1.4rem;margin-bottom:.3rem;}
+.result-sub{color:var(--muted);font-size:.85rem;}
+.explanation-block{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem;margin:1.2rem 0;}
+.explanation-block .why-label{color:var(--accent2);}
+.explanation-text{font-size:.85rem;line-height:1.65;color:var(--muted);}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.65rem 1.4rem;border-radius:9px;font-size:.85rem;font-weight:500;cursor:pointer;transition:all .2s;border:1px solid transparent;}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+.btn-primary:hover{background:#3d7de6;border-color:#3d7de6;}
+.btn-secondary{background:transparent;color:var(--muted);border-color:var(--border);}
+.btn-secondary:hover{color:var(--text);border-color:var(--text);}
+.btn-success{background:rgba(52,211,153,.15);color:var(--green);border-color:rgba(52,211,153,.3);}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+.btn-row{display:flex;gap:.75rem;margin-top:1.25rem;flex-wrap:wrap;}
+
+/* Overall score bar */
+.overall-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.5rem;margin-bottom:2rem;display:flex;align-items:center;gap:1.5rem;}
+.score-ring{width:72px;height:72px;flex-shrink:0;}
+.score-ring svg{transform:rotate(-90deg);}
+.score-ring circle{fill:none;stroke-width:6;stroke-linecap:round;}
+.ring-bg{stroke:var(--border);}
+.ring-fill{stroke:var(--accent);stroke-dasharray:188;stroke-dashoffset:188;transition:stroke-dashoffset 1s ease;}
+.overall-label{font-family:'DM Mono',monospace;font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.3rem;}
+.overall-val{font-family:'Syne',sans-serif;font-weight:700;font-size:1.6rem;}
+.overall-sub{font-size:.8rem;color:var(--muted);}
+
+/* Hidden */
+.hidden{display:none!important;}
+@media(max-width:640px){.options-grid{grid-template-columns:1fr;}.page{padding:1.25rem 1rem 5rem;}}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="index.html" class="sidebar-logo">Social<span>Proof</span></a>
+    <button class="sidebar-close-btn" onclick="toggleSidebar()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="index.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>Evaluate
+    </a>
+    <a href="lessons.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Lessons
+    </a>
+    <a href="quiz.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Quiz
+    </a>
+    <a href="prebunking.html" class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Prebunking Lab
+    </a>
+    <a href="calibration.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Calibration
+    </a>
+    <a href="dashboard.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard
+    </a>
+    <div class="nav-divider"></div>
+    <a href="admin.html" class="nav-item hidden" id="sidebar-admin-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Admin
+    </a>
+  </nav>
+  <div class="sidebar-section">Age Mode</div>
+  <div class="age-mode-grid">
+    <button class="age-pill" id="age-kids" onclick="setAgeMode('kids')">🎮<br>Kids</button>
+    <button class="age-pill" id="age-teen" onclick="setAgeMode('teen')">⚡<br>Teen</button>
+    <button class="age-pill active" id="age-adult" onclick="setAgeMode('adult')">📊<br>Adult</button>
+    <button class="age-pill" id="age-older" onclick="setAgeMode('older')">📖<br>Older</button>
+  </div>
+  <div class="sidebar-user">
+    <span class="sidebar-username" id="sidebar-uname">Guest</span>
+    <button class="logout-btn" onclick="doLogout()">Logout</button>
+  </div>
+</aside>
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+<button class="burger-btn" id="burger-btn" onclick="toggleSidebar()">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+</button>
+
+<!-- MAIN -->
+<main class="main" id="main">
+  <div class="page">
+    <div class="page-header">
+      <div class="page-eyebrow">Media Literacy · Inoculation Training</div>
+      <h1 class="page-title" id="page-title">Prebunking Lab</h1>
+      <p class="page-sub" id="page-sub">Learn to recognize manipulation techniques before you encounter them — the most effective defense against misinformation.</p>
+    </div>
+
+    <!-- Progress -->
+    <div class="prog-label"><strong id="prog-text">Loading modules…</strong></div>
+    <div class="progress-track" id="progress-track"></div>
+
+    <!-- Overall score -->
+    <div class="overall-card" id="overall-card">
+      <div class="score-ring">
+        <svg viewBox="0 0 72 72" width="72" height="72">
+          <circle class="ring-bg" cx="36" cy="36" r="30"/>
+          <circle class="ring-fill" id="ring-fill" cx="36" cy="36" r="30"/>
+        </svg>
+      </div>
+      <div>
+        <div class="overall-label">Inoculation Score</div>
+        <div class="overall-val" id="overall-val">—</div>
+        <div class="overall-sub" id="overall-sub">Complete exercises to build resistance</div>
+      </div>
+    </div>
+
+    <!-- Module view -->
+    <div id="module-area">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+</main>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────────────────
+const API_BASE = window.__BACKEND_URL__ || '';
+let sidebarOpen = true;
+
+// ── Technique database ────────────────────────────────────────────────────────
+const TECHNIQUES = [
+  {
+    id: 'emotional_override',
+    name: 'Emotional Override',
+    icon: '😱',
+    color: '#f87171',
+    short: 'Fear & outrage bypass critical thinking',
+    explanation: 'This technique deliberately triggers strong emotions — fear, outrage, disgust, or panic — to make you react before you think. When you\'re emotionally aroused, your brain\'s analytical systems take a back seat. Misinformation spreads faster when it makes you angry or afraid.',
+    why: 'Strong emotions activate the amygdala and reduce prefrontal cortex activity, which handles critical evaluation. Content engineered to outrage is shared 6× more than neutral content.',
+    vaccine_example: '"DOCTORS ARE KILLING YOUR CHILDREN WITH VACCINES!! Share this before they DELETE it!! Parents are PANICKING as government covers up the TRUTH. Don\'t let them silence us!!"',
+    vaccine_signals: ['ALL CAPS for alarm', '"Delete it" conspiracy implication', 'Parents panicking — fear escalation', 'Urgency to share before reading'],
+    exercise_example: '"The cancer cure they\'ve been hiding from you for DECADES. Big Pharma spends $4 BILLION every year suppressing this simple remedy. Doctors are FURIOUS. Share with everyone you love before this gets banned!"',
+    exercise_label: 'What manipulation technique is this post using?',
+    correct_id: 'emotional_override',
+    explanation_result: 'This uses emotional override combined with urgency. "Before it gets banned" triggers fear of missing out. "Everyone you love" makes sharing feel like an act of care. The ALL CAPS amplifies urgency to bypass critical thinking. Notice there\'s no actual evidence, source, or study cited — just emotion.',
+  },
+  {
+    id: 'false_authority',
+    name: 'False Authority',
+    icon: '🎓',
+    color: '#fb923c',
+    short: 'Fake or irrelevant credentials lend false credibility',
+    explanation: 'This technique uses the appearance of expertise to make a claim seem credible. The "expert" may not exist, may be misrepresented, may have credentials in an unrelated field, or may be a real person whose actual view is the opposite of what\'s being claimed.',
+    why: 'We\'re conditioned from childhood to trust authority figures. Credentials create a mental shortcut: "an expert said it, so it must be true." Bad actors exploit this by fabricating or misrepresenting expertise.',
+    vaccine_example: '"Harvard neurologist Dr. Michael Reeves confirms: smartphones cause permanent brain damage in under 30 minutes of use. He was fired from the university for publishing this research." [Link goes to a personal blog with no institutional affiliation]',
+    vaccine_signals: ['Prestigious institution name-drop', 'Vague but impressive title', '"Fired for telling the truth" — martyrdom framing', 'No actual study citation'],
+    exercise_example: '"Former NASA physicist Dr. Elena Kovacs has confirmed the moon landing was staged. She was part of the original mission team and has now released classified documents proving the hoax. The government has been trying to silence her for 50 years."',
+    exercise_label: 'What manipulation technique is primarily being used?',
+    correct_id: 'false_authority',
+    explanation_result: '"Former NASA physicist" sounds credible until you ask: is this person real? Can you verify the documents? "Trying to silence her for 50 years" is the conspiracy layer added to explain why you can\'t verify. Legitimate scientists publish in peer-reviewed journals, not through social media posts.',
+  },
+  {
+    id: 'cherry_pick',
+    name: 'Cherry-Picked Statistics',
+    icon: '📊',
+    color: '#fbbf24',
+    short: 'Real numbers, misleading context',
+    explanation: 'This technique uses real statistics — so it can\'t be called "fake" — but selects only the data that supports the desired conclusion while hiding contradictory data. The numbers are technically accurate, the conclusion is deliberately misleading.',
+    why: 'We tend to trust numbers more than words because they feel objective. Cherry-picking exploits this trust by providing partial truth. The lie isn\'t in the number — it\'s in what\'s left out.',
+    vaccine_example: '"Crime in District 5 DOUBLED under Mayor Santos! In 2022 there were 2 reported robberies. In 2023 there were 4. This is a 100% increase — and she says she\'s tough on crime?"',
+    vaccine_signals: ['100% increase sounds huge — but 2→4 is tiny', 'No comparison to other districts', 'No context: is this better or worse than national average?', 'One year of data, cherry-picked timeframe'],
+    exercise_example: '"New study: coffee drinkers have 40% lower risk of liver disease! Scientists at Stanford analyzed data from 1,200 participants and confirmed coffee\'s protective effect. Time to upgrade your morning routine."',
+    exercise_label: 'Which technique is most likely being used here?',
+    correct_id: 'cherry_pick',
+    explanation_result: 'The stat may be real — but what\'s missing matters. Was this one study among dozens? Did the others show different results? Was the sample representative? Were there confounders (coffee drinkers may exercise more, etc.)? "Scientists at Stanford" adds false authority. One study showing correlation is very different from established medical consensus.',
+  },
+  {
+    id: 'false_dichotomy',
+    name: 'False Dichotomy',
+    icon: '⚖️',
+    color: '#a78bfa',
+    short: 'Only two choices presented when many exist',
+    explanation: 'This technique frames a complex situation as having only two possible options — usually one "right" and one obviously bad — when reality has many more. It forces you to pick a side and treats any nuance as betrayal.',
+    why: 'Binary thinking is easier for our brains to process. By eliminating middle ground, this technique makes moderation or nuance seem like weakness or complicity. It\'s especially effective at polarizing communities.',
+    vaccine_example: '"You either support unrestricted free speech online, or you support government censorship and a digital dictatorship. There is no middle ground — which side are you on?"',
+    vaccine_signals: ['"No middle ground" stated explicitly', 'Two extremes only — ignores content moderation, platform policy, legal frameworks', 'Emotional loaded language ("dictatorship")', '"Which side are you on?" — demands immediate allegiance'],
+    exercise_example: '"Either we open all borders completely and allow unlimited immigration, OR we build walls and deport everyone who entered illegally. Compromise is just a way of doing nothing. Pick a side."',
+    exercise_label: 'Identify the primary manipulation technique:',
+    correct_id: 'false_dichotomy',
+    explanation_result: 'Immigration policy has dozens of possible approaches — visa systems, pathways to residency, asylum processes, labor agreements, regional agreements, enforcement prioritization. "Compromise is doing nothing" explicitly attacks the space where real policy lives. This technique shuts down policy discussion by making nuance feel like cowardice.',
+  },
+  {
+    id: 'conspiracy_framing',
+    name: 'Conspiracy Framing',
+    icon: '🕵️',
+    color: '#60a5fa',
+    short: '"They" are hiding the truth from you',
+    explanation: 'This technique positions information as suppressed truth that powerful forces don\'t want you to know. It\'s designed to make the claim unfalsifiable: if you can\'t find evidence, it\'s because "they" hid it; if an expert disagrees, they\'re part of the cover-up.',
+    why: 'Conspiracy framing is psychologically powerful because it makes the believer feel special (you know the truth), creates an in-group, and explains away all counter-evidence. The more you try to disprove it, the more "proof" it becomes.',
+    vaccine_example: '"What the mainstream media doesn\'t want you to know: 5G towers are linked to a 300% increase in neurological disorders. The WHO, telecom companies, and governments are all in on it. Notice how this never gets covered? That\'s not an accident."',
+    vaccine_signals: ['"Doesn\'t want you to know" — suppression framing', 'Multiple institutions all colluding', '"That\'s not an accident" — absence of coverage as proof', 'No source cited — secrecy explains why'],
+    exercise_example: '"Doctors know that this common kitchen ingredient reverses diabetes completely. They\'re not telling patients because it would destroy the $327 billion diabetes drug industry. They need you sick. Your doctor profits from your illness. Do your own research."',
+    exercise_label: 'Which manipulation technique is driving this post?',
+    correct_id: 'conspiracy_framing',
+    explanation_result: '"They need you sick" is the core conspiracy claim. "Do your own research" is a red flag phrase that means "distrust experts and rely on unvetted online sources." The unfalsifiability is built in: if your doctor says it\'s false, that proves they\'re part of the conspiracy. Legitimate medical breakthroughs don\'t stay secret — they get published, replicated, and adopted because treating diseases is profitable.',
+  },
+  {
+    id: 'impersonation',
+    name: 'Source Impersonation',
+    icon: '🎭',
+    color: '#34d399',
+    short: 'Fake sources that look real',
+    explanation: 'This technique creates or uses sources that mimic legitimate media organizations, government agencies, or scientific bodies. It could be a Facebook page with a logo similar to a real news outlet, a URL like "cnn-news24.net", or a screenshot taken out of context.',
+    why: 'We trust known brand names. Impersonation exploits brand recognition — you see "CNN" or "Department of Health" and your guard drops before you check whether it\'s actually real. Screenshots are especially effective because the original source is hard to verify.',
+    vaccine_example: '[A screenshot shows what appears to be a Reuters headline: "Philippines DOH Confirms Vaccine Causes 50,000 Deaths — Immediate Recall Ordered" — but the font is slightly different and the URL bar shows reuters-ph-news.blogspot.com]',
+    vaccine_signals: ['Well-known brand name (Reuters) for trust', 'URL is NOT reuters.com', 'Sensational claim Reuters would never publish this way', 'Screenshot format makes URL hard to see'],
+    exercise_example: '"According to the ABS-CBN News Facebook page: \'President Signs Emergency Order Banning All Imports Effective This Week\'" [The post comes from a page called "ABS-CBN News — Philippines Updates" with 892 followers, not verified]',
+    exercise_label: 'What technique is this content using?',
+    correct_id: 'impersonation',
+    explanation_result: 'The real ABS-CBN News page has millions of followers and a blue verification checkmark. "892 followers" and "no verification" are the tells. Impersonation pages often add words like "Updates," "Official," or "Breaking" to the name. Always check the exact page name, follower count, and verification status before trusting breaking news from a social media post.',
+  },
+];
+
+const OPTIONS_ALL = [
+  {id:'emotional_override', label:'Emotional Override'},
+  {id:'false_authority', label:'False Authority'},
+  {id:'cherry_pick', label:'Cherry-Picked Statistics'},
+  {id:'false_dichotomy', label:'False Dichotomy'},
+  {id:'conspiracy_framing', label:'Conspiracy Framing'},
+  {id:'impersonation', label:'Source Impersonation'},
+];
+
+// ── State ─────────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'sp_prebunking_progress';
+let progress = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '{}');
+// progress[id] = {phase: 'vaccine'|'exercise'|'done', correct: bool}
+let activeTech = null;
+let selectedOption = null;
+
+function getProgress(id) { return progress[id] || {phase:'vaccine', correct:null}; }
+function saveProgress(id, data) {
+  progress[id] = data;
+  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+  // Fire API (non-blocking)
+  const tok = getSessionToken();
+  if (tok) {
+    fetch(`${API_BASE}/prebunking/attempt`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        session_token: tok,
+        user_id: USER_ID,
+        technique_id: id,
+        correct: data.correct,
+      })
+    }).catch(()=>{});
+  }
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderProgress() {
+  const track = document.getElementById('progress-track');
+  const doneCount = TECHNIQUES.filter(t => getProgress(t.id).phase === 'done').length;
+  track.innerHTML = TECHNIQUES.map((t,i) => {
+    const p = getProgress(t.id);
+    const cls = p.phase === 'done' ? 'done' : (activeTech === t.id ? 'active' : '');
+    return `<div class="prog-dot ${cls}" title="${t.name}"></div>`;
+  }).join('');
+  document.getElementById('prog-text').innerHTML =
+    `Technique <strong>${doneCount}</strong> of <strong>${TECHNIQUES.length}</strong> completed`;
+  updateScore();
+}
+
+function updateScore() {
+  const done = TECHNIQUES.filter(t => getProgress(t.id).phase === 'done');
+  const correct = done.filter(t => getProgress(t.id).correct).length;
+  const pct = done.length ? Math.round((correct / done.length) * 100) : 0;
+  const offset = 188 - (188 * pct / 100);
+  document.getElementById('ring-fill').style.strokeDashoffset = offset;
+  document.getElementById('overall-val').textContent = done.length ? `${pct}%` : '—';
+  document.getElementById('overall-sub').textContent = done.length
+    ? `${correct} of ${done.length} exercises correct`
+    : 'Complete exercises to build resistance';
+}
+
+function renderTechList() {
+  const area = document.getElementById('module-area');
+  const tech = TECHNIQUES.find(t => t.id === activeTech);
+  if (!tech) {
+    // Show technique picker
+    area.innerHTML = `
+      <div class="module-card">
+        <div class="phase-badge phase-vaccine">Choose a technique</div>
+        <div class="module-title">Select a manipulation technique to study</div>
+        <div class="module-desc">Each module has two phases: first you learn the technique with a clearly labeled example (the vaccine), then you identify it in an unlabeled real example (the exercise).</div>
+        <div class="techniques-grid">
+          ${TECHNIQUES.map(t => {
+            const p = getProgress(t.id);
+            const done = p.phase === 'done';
+            return `<button class="technique-chip ${done?'completed':''}" onclick="startTech('${t.id}')">
+              <div class="tech-icon" style="background:${t.color}22">${t.icon}</div>
+              <div><div class="tech-name">${t.name}</div><div class="tech-sub">${t.short}</div></div>
+              <div class="tech-status ${done?'done':''}">${done ? (p.correct?'✓ correct':'✗ done') : 'start →'}</div>
+            </button>`;
+          }).join('')}
+        </div>
+      </div>`;
+    return;
+  }
+
+  const p = getProgress(tech.id);
+  if (p.phase === 'vaccine') renderVaccine(tech);
+  else if (p.phase === 'exercise') renderExercise(tech);
+  else renderResult(tech, p.correct);
+}
+
+function startTech(id) {
+  activeTech = id;
+  selectedOption = null;
+  renderProgress();
+  renderTechList();
+}
+
+function renderVaccine(tech) {
+  document.getElementById('module-area').innerHTML = `
+    <div class="module-card">
+      <div class="phase-badge phase-vaccine">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Phase 1 — The Vaccine
+      </div>
+      <div class="module-title">${tech.icon} ${tech.name}</div>
+      <div class="module-desc">${tech.explanation}</div>
+      <div class="vaccine-label">⚠ Labeled example of this technique:</div>
+      <div class="example-box">
+        <div class="example-text">"${tech.vaccine_example}"</div>
+        <div class="example-annotation">
+          ${tech.vaccine_signals.map(s=>`<span class="annotation-tag">${s}</span>`).join('')}
+        </div>
+      </div>
+      <div class="why-box">
+        <div class="why-label">Why it works</div>
+        <div class="why-text">${tech.why}</div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="activeTech=null;renderProgress();renderTechList()">← Back</button>
+        <button class="btn btn-primary" onclick="advanceToExercise('${tech.id}')">I understand this technique →</button>
+      </div>
+    </div>`;
+}
+
+function advanceToExercise(id) {
+  progress[id] = {phase:'exercise', correct:null};
+  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+  selectedOption = null;
+  renderTechList();
+}
+
+function renderExercise(tech) {
+  // Pick 4 options: always include the correct one + 3 random others
+  const others = OPTIONS_ALL.filter(o => o.id !== tech.id);
+  const shuffled = others.sort(()=>Math.random()-.5).slice(0,3);
+  const opts = [OPTIONS_ALL.find(o=>o.id===tech.id), ...shuffled].sort(()=>Math.random()-.5);
+
+  document.getElementById('module-area').innerHTML = `
+    <div class="module-card">
+      <div class="phase-badge phase-exercise">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Phase 2 — Identify It
+      </div>
+      <div class="module-title">Now spot it without the labels</div>
+      <div class="module-desc">${tech.exercise_label}</div>
+      <div class="vaccine-label">Unlabeled example:</div>
+      <div class="example-box exercise-box">
+        <div class="example-text">"${tech.exercise_example}"</div>
+      </div>
+      <div class="options-grid" id="opts-grid">
+        ${opts.map((o,i)=>`
+          <button class="option-btn" id="opt-${o.id}" onclick="selectOption('${o.id}','${tech.id}')">
+            <div class="option-letter">${String.fromCharCode(65+i)}</div>
+            <div class="option-name">${o.label}</div>
+          </button>`).join('')}
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="activeTech=null;renderProgress();renderTechList()">← Back</button>
+        <button class="btn btn-primary" id="submit-btn" onclick="submitAnswer('${tech.id}')" disabled>Check Answer →</button>
+      </div>
+    </div>`;
+}
+
+function selectOption(optId, techId) {
+  selectedOption = optId;
+  document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('opt-'+optId)?.classList.add('selected');
+  document.getElementById('submit-btn').disabled = false;
+}
+
+function submitAnswer(techId) {
+  const tech = TECHNIQUES.find(t => t.id === techId);
+  const correct = selectedOption === tech.correct_id;
+
+  // Show correct/wrong on buttons
+  document.querySelectorAll('.option-btn').forEach(b => {
+    const bid = b.id.replace('opt-','');
+    if (bid === tech.correct_id) b.classList.add('correct');
+    else if (bid === selectedOption && !correct) b.classList.add('wrong');
+    b.onclick = null;
+  });
+  document.getElementById('submit-btn').disabled = true;
+  document.getElementById('submit-btn').textContent = correct ? '✓ Correct!' : '✗ Incorrect';
+  document.getElementById('submit-btn').className = `btn ${correct?'btn-success':''}`;
+
+  saveProgress(techId, {phase:'done', correct});
+  setTimeout(() => renderResult(tech, correct), 1200);
+}
+
+function renderResult(tech, correct) {
+  renderProgress();
+  document.getElementById('module-area').innerHTML = `
+    <div class="module-card">
+      <div class="phase-badge ${correct?'phase-result-correct':'phase-result-wrong'}">
+        ${correct ? '✓ Correct' : '✗ Incorrect'}
+      </div>
+      <div class="result-score">
+        <div class="result-icon">${correct ? '🛡️' : '🔍'}</div>
+        <div class="result-msg">${correct ? 'You spotted it!' : 'Not quite — here\'s why'}</div>
+        <div class="result-sub">${correct
+          ? 'Your resistance to ' + tech.name + ' just got stronger.'
+          : 'Understanding the technique is the first step to resisting it.'}</div>
+      </div>
+      <div class="explanation-block">
+        <div class="why-label">Why the answer is: ${tech.name}</div>
+        <div class="explanation-text">${tech.explanation_result}</div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="activeTech=null;renderProgress();renderTechList()">All Techniques</button>
+        ${getNextTech(tech.id) ? `<button class="btn btn-primary" onclick="startTech('${getNextTech(tech.id)}')">Next Technique →</button>` : `<button class="btn btn-primary" onclick="activeTech=null;renderProgress();renderTechList()">View Summary →</button>`}
+      </div>
+    </div>`;
+}
+
+function getNextTech(currentId) {
+  const idx = TECHNIQUES.findIndex(t => t.id === currentId);
+  const remaining = TECHNIQUES.slice(idx+1).filter(t => getProgress(t.id).phase !== 'done');
+  return remaining[0]?.id || TECHNIQUES.find(t => getProgress(t.id).phase !== 'done' && t.id !== currentId)?.id || null;
+}
+
+// ── Sidebar / Age Mode ────────────────────────────────────────────────────────
+let sOpen = true;
+const sidebar = document.getElementById('sidebar');
+const mainEl  = document.getElementById('main');
+const overlay = document.getElementById('sidebar-overlay');
+const burgerBtn = document.getElementById('burger-btn');
+
+function toggleSidebar() {
+  sOpen = !sOpen;
+  if (sOpen) { sidebar.classList.remove('collapsed'); mainEl.classList.remove('expanded'); overlay.classList.remove('visible'); burgerBtn.classList.remove('visible'); }
+  else { sidebar.classList.add('collapsed'); mainEl.classList.add('expanded'); overlay.classList.add('visible'); burgerBtn.classList.add('visible'); }
+}
+function initSidebar() { if (window.innerWidth < 900) { sidebar.classList.add('collapsed'); mainEl.classList.add('expanded'); burgerBtn.classList.add('visible'); sOpen=false; } }
+window.addEventListener('resize', initSidebar); initSidebar();
+
+let currentMode = localStorage.getItem('sp_age_mode') || 'adult';
+function setAgeMode(m) { currentMode=m; localStorage.setItem('sp_age_mode',m); document.querySelectorAll('.age-pill').forEach(e=>e.classList.remove('active')); document.getElementById('age-'+m)?.classList.add('active'); }
+document.getElementById('age-'+currentMode)?.classList.add('active');
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+const API_BASE_CFG = '';
+const USER_ID = localStorage.getItem('sp_user_id') ? parseInt(localStorage.getItem('sp_user_id')) : null;
+function getSessionToken() { return sessionStorage.getItem('sp_session') || ''; }
+async function initSession() {
+  let t = sessionStorage.getItem('sp_session');
+  if (!t) { try { const r=await fetch('/auth/session'); const d=await r.json(); t=d.session_token; } catch { t=Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b=>b.toString(16).padStart(2,'0')).join(''); } sessionStorage.setItem('sp_session',t); }
+}
+function doLogout() { fetch('/auth/cookie-logout',{method:'POST',credentials:'include'}).catch(()=>{}); localStorage.clear(); sessionStorage.clear(); window.location.href='index.html'; }
+const uname = localStorage.getItem('sp_username');
+if (uname) document.getElementById('sidebar-uname').textContent = uname;
+if (localStorage.getItem('sp_role')==='admin') document.getElementById('sidebar-admin-link').classList.remove('hidden');
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init() {
+  await initSession();
+  // Try to load server-side progress
+  try {
+    const tok = getSessionToken();
+    const uid = USER_ID ? `&user_id=${USER_ID}` : '';
+    const r = await fetch(`${API_BASE}/prebunking/modules?session_token=${tok}${uid}`);
+    if (r.ok) {
+      const data = await r.json();
+      // Merge server progress into local
+      (data.completions || []).forEach(c => {
+        progress[c.technique_id] = {phase:'done', correct: c.correct};
+      });
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+    }
+  } catch { /* offline — use local progress */ }
+  renderProgress();
+  renderTechList();
+}
+init();
+</script>
+</body>
+</html>

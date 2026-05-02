@@ -1,0 +1,13 @@
+{
+  "name": "socialproof-frontend",
+  "version": "1.0.0",
+  "description": "SocialProof Frontend — static HTML/JS pages",
+  "scripts": {
+    "dev": "npx serve . -p 3000",
+    "build": "echo 'Static site — no build step needed'",
+    "start": "npx serve . -p 3000"
+  },
+  "devDependencies": {
+    "serve": "^14.2.0"
+  }
+}

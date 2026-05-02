@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="/env-config.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SocialProof — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+/* ── Hide all scrollbars ─────────────────────────────────── */
+*{scrollbar-width:none;-ms-overflow-style:none;}
+*::-webkit-scrollbar{display:none;}
+
+/* ── Design tokens ──────────────────────────────────────────────── */
+:root{
+  --bg:#0d0f14;--surface:#13161e;--card:#181c27;--border:#252a3a;
+  --text:#e8eaf0;--muted:#6b7394;
+  --accent:#4f8ef7;--accent2:#a78bfa;
+  --green:#34d399;--red:#f87171;--orange:#fb923c;--yellow:#fbbf24;
+  --font-body:'DM Sans',sans-serif;
+  --font-mono:'DM Mono',monospace;
+  --font-head:'Syne',sans-serif;
+  --base-size:1rem;
+}
+
+/* ── Age mode overrides ─────────────────────────────────────────── */
+body.age-kids{
+  --base-size:1.1rem;
+  --bg:#0e1120;--card:#1a1f30;
+  --accent:#6ee7b7;--accent2:#f9a8d4;
+}
+body.age-kids .section-label{ letter-spacing:.06em; }
+body.age-kids .history-table td{ font-size:.95rem; }
+
+body.age-teen{
+  --base-size:1rem;
+  --accent:#818cf8;--accent2:#f472b6;
+}
+
+body.age-older{
+  --base-size:1.15rem;
+  --bg:#0a0c10;--card:#181c28;
+  --text:#f0f2f8;--muted:#8892b0;
+  --border:#2a3050;
+}
+body.age-older nav a,
+body.age-older .section-label,
+body.age-older .stat-label{ font-size:.85rem; letter-spacing:.04em; }
+body.age-older .weakness-name,
+body.age-older .history-table td{ font-size:1rem; }
+body.age-older .btn{ font-size:.95rem; padding:.75rem 1.8rem; }
+
+/* ── Base reset ─────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:var(--font-body);
+  font-size:var(--base-size);
+  background:var(--bg);color:var(--text);
+  min-height:100vh;overflow-x:hidden;
+}
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:0;opacity:.5;
+}
+.grid-bg{
+  position:fixed;inset:0;
+  background-image:linear-gradient(rgba(79,142,247,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(79,142,247,.03) 1px,transparent 1px);
+  background-size:40px 40px;pointer-events:none;z-index:0;
+}
+.app{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:2rem 1.5rem 6rem;}
+
+/* ── Header / nav ───────────────────────────────────────────────── */
+header{display:flex;align-items:center;justify-content:space-between;padding:1.5rem 0 3rem;border-bottom:1px solid var(--border);margin-bottom:3rem;}
+.logo{font-family:var(--font-head);font-weight:800;font-size:1.4rem;letter-spacing:-.02em;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.logo span{font-weight:400;opacity:.6;-webkit-text-fill-color:rgba(232,234,240,.4);}
+nav{display:flex;align-items:center;gap:0;flex-wrap:wrap;}
+nav a{font-family:var(--font-mono);font-size:.78rem;color:var(--muted);text-decoration:none;margin-left:1.5rem;letter-spacing:.05em;transition:color .2s;}
+nav a:hover{color:var(--text);}
+nav a.active{color:var(--accent);}
+
+/* ── Age mode selector ──────────────────────────────────────────── */
+.age-selector{display:flex;gap:.4rem;align-items:center;margin-bottom:2rem;flex-wrap:wrap;}
+.age-label{font-family:var(--font-mono);font-size:.66rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-right:.4rem;}
+.age-btn{
+  font-family:var(--font-mono);font-size:.68rem;padding:.3rem .85rem;
+  border-radius:20px;border:1px solid var(--border);background:transparent;
+  color:var(--muted);cursor:pointer;transition:all .2s;letter-spacing:.04em;
+}
+.age-btn:hover{color:var(--text);border-color:var(--muted);}
+.age-btn.active{background:rgba(79,142,247,.12);color:var(--accent);border-color:rgba(79,142,247,.4);}
+
+/* ── Section labels ─────────────────────────────────────────────── */
+.section-label{font-family:var(--font-mono);font-size:.72rem;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.6rem;display:flex;align-items:center;gap:.5rem;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+h2{font-family:var(--font-head);font-weight:700;font-size:1.5rem;margin-bottom:1.5rem;letter-spacing:-.02em;}
+
+/* ── Auth wall ──────────────────────────────────────────────────── */
+.auth-wall{text-align:center;padding:4rem 2rem;background:var(--card);border:1px solid var(--border);border-radius:16px;}
+.auth-wall h3{font-family:var(--font-head);font-weight:700;font-size:1.2rem;margin-bottom:.8rem;}
+.auth-wall p{color:var(--muted);font-size:.9rem;margin-bottom:1.5rem;line-height:1.6;}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--font-head);font-weight:600;font-size:.88rem;padding:.7rem 1.6rem;border-radius:10px;border:none;cursor:pointer;transition:all .2s;text-decoration:none;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:#3a78e8;transform:translateY(-1px);}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);}
+.btn-ghost:hover{color:var(--text);}
+
+/* ── Welcome bar ────────────────────────────────────────────────── */
+.welcome{margin-bottom:2rem;}
+.welcome h2{margin-bottom:.3rem;}
+.welcome-sub{color:var(--muted);font-size:.9rem;}
+
+/* ── Stats grid ─────────────────────────────────────────────────── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem;margin-bottom:2.5rem;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.2rem;}
+.stat-val{font-family:var(--font-head);font-weight:800;font-size:2rem;margin-bottom:.3rem;}
+.stat-label{font-family:var(--font-mono);font-size:.68rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;}
+.stat-sub{font-size:.78rem;color:var(--muted);margin-top:.4rem;}
+.stat-val.green{color:var(--green);}
+.stat-val.blue{color:var(--accent);}
+.stat-val.orange{color:var(--orange);}
+.stat-val.purple{color:var(--accent2);}
+
+/* ── MIL Skill progress bars ───────────────────────────────────── */
+.skill-grid{display:flex;flex-direction:column;gap:.75rem;margin-bottom:2.5rem;}
+.skill-item{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.2rem;}
+.skill-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;}
+.skill-name{font-size:.88rem;font-weight:500;}
+.skill-meta{display:flex;align-items:center;gap:.75rem;}
+.skill-level{font-family:var(--font-mono);font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;padding:.2rem .65rem;border-radius:20px;}
+.level-beginner{background:rgba(107,115,148,.12);color:var(--muted);border:1px solid rgba(107,115,148,.25);}
+.level-intermediate{background:rgba(251,191,36,.1);color:var(--yellow);border:1px solid rgba(251,191,36,.2);}
+.level-advanced{background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.2);}
+.skill-accuracy{font-family:var(--font-mono);font-size:.72rem;color:var(--muted);}
+.skill-bar-wrap{height:4px;background:var(--surface);border-radius:2px;overflow:hidden;}
+.skill-bar{height:100%;border-radius:2px;transition:width .7s ease;}
+.skill-bar.beginner{background:linear-gradient(90deg,var(--muted),rgba(107,115,148,.5));width:20%;}
+.skill-bar.intermediate{background:linear-gradient(90deg,var(--yellow),var(--orange));width:55%;}
+.skill-bar.advanced{background:linear-gradient(90deg,var(--green),var(--accent));width:90%;}
+.mil-tag{font-family:var(--font-mono);font-size:.62rem;color:var(--accent2);letter-spacing:.05em;margin-top:.4rem;opacity:.8;}
+
+/* ── Behavior insight cards ─────────────────────────────────────── */
+.insight-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;margin-bottom:2.5rem;}
+.insight-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.4rem;position:relative;overflow:hidden;}
+.insight-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));}
+.insight-icon{font-size:1.4rem;margin-bottom:.75rem;}
+.insight-title{font-family:var(--font-head);font-weight:700;font-size:.95rem;margin-bottom:.5rem;}
+.insight-body{font-size:.83rem;color:var(--muted);line-height:1.65;margin-bottom:.9rem;}
+.insight-mil{font-family:var(--font-mono);font-size:.62rem;color:var(--accent2);letter-spacing:.06em;margin-bottom:.75rem;text-transform:uppercase;}
+.insight-action{font-family:var(--font-mono);font-size:.72rem;color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;transition:opacity .2s;}
+.insight-action:hover{opacity:.7;}
+
+/* ── Lesson weakness bars ───────────────────────────────────────── */
+.weakness-list{display:flex;flex-direction:column;gap:.8rem;margin-bottom:2.5rem;}
+.weakness-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1rem 1.2rem;}
+.weakness-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;}
+.weakness-name{font-size:.88rem;font-weight:500;}
+.weakness-count{font-family:var(--font-mono);font-size:.72rem;color:var(--muted);}
+.weakness-bar-wrap{height:4px;background:var(--surface);border-radius:2px;overflow:hidden;}
+.weakness-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width .6s ease;}
+
+/* ── History table ──────────────────────────────────────────────── */
+.history-table{width:100%;border-collapse:collapse;font-size:.87rem;}
+.history-table th{font-family:var(--font-mono);font-size:.65rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;text-align:left;padding:.6rem 1rem;border-bottom:1px solid var(--border);}
+.history-table td{padding:.8rem 1rem;border-bottom:1px solid rgba(37,42,58,.5);vertical-align:middle;}
+.history-table tr:hover td{background:rgba(79,142,247,.03);}
+.content-preview{max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);}
+.label-pill{display:inline-block;font-family:var(--font-mono);font-size:.68rem;padding:.2rem .65rem;border-radius:20px;}
+.pill-credible{background:rgba(52,211,153,.12);color:var(--green);border:1px solid rgba(52,211,153,.25);}
+.pill-uncertain{background:rgba(251,191,36,.1);color:var(--yellow);border:1px solid rgba(251,191,36,.2);}
+.pill-misleading{background:rgba(248,113,113,.1);color:var(--red);border:1px solid rgba(248,113,113,.2);}
+.pill-none{background:rgba(107,115,148,.1);color:var(--muted);border:1px solid rgba(107,115,148,.2);}
+.conf-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:.35rem;}
+.conf-high{background:var(--green);}
+.conf-medium{background:var(--yellow);}
+.conf-low{background:var(--muted);}
+
+.empty-state{text-align:center;padding:3rem 1rem;color:var(--muted);font-size:.9rem;background:var(--card);border:1px solid var(--border);border-radius:12px;}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;margin:2rem auto;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+body.age-older .welcome-sub{font-size:1rem;line-height:1.7;}
+
+/* ── Sidebar (shared) ─── */
+:root {--sidebar-w:256px;}
+/* ── SIDEBAR ─────────────────────────────────────────────── */
+.sidebar {
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: var(--sidebar-w);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  transition: transform .3s cubic-bezier(.4,0,.2,1);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.sidebar.collapsed { transform: translateX(calc(-1 * var(--sidebar-w))); }
+
+.sidebar-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.5);
+  backdrop-filter: blur(4px);
+  z-index: 190;
+  opacity: 0; pointer-events: none;
+  transition: opacity .3s;
+}
+.sidebar-overlay.visible { opacity: 1; pointer-events: all; }
+
+/* Sidebar header */
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1rem 1rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sidebar-logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: -.02em;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-decoration: none;
+}
+.sidebar-logo span {
+  font-weight: 400;
+  opacity: .55;
+  -webkit-text-fill-color: rgba(232,234,240,.35);
+}
+.sidebar-close-btn {
+  width: 30px; height: 30px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  cursor: pointer;
+  color: var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  transition: all .2s;
+  flex-shrink: 0;
+}
+.sidebar-close-btn:hover { border-color: var(--text); color: var(--text); }
+
+/* Sidebar nav */
+.sidebar-nav {
+  padding: .75rem .6rem;
+  flex: 1;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  padding: .62rem .8rem;
+  border-radius: 9px;
+  text-decoration: none;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  font-size: .78rem;
+  letter-spacing: .04em;
+  transition: all .2s;
+  margin-bottom: .1rem;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+}
+.nav-item:hover { color: var(--text); background: rgba(255,255,255,.04); }
+.nav-item.active { color: var(--accent); background: rgba(79,142,247,.1); }
+.nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+.nav-divider {
+  height: 1px;
+  background: var(--border);
+  margin: .5rem .8rem;
+}
+
+/* Sidebar section labels */
+.sidebar-section {
+  font-family: 'DM Mono', monospace;
+  font-size: .63rem;
+  color: var(--muted);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: .75rem 1rem .4rem;
+}
+
+/* Age mode pills in sidebar */
+.age-mode-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .4rem;
+  padding: .25rem .7rem .75rem;
+}
+.age-pill {
+  padding: .45rem .5rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  font-size: .68rem;
+  cursor: pointer;
+  transition: all .2s;
+  text-align: center;
+  line-height: 1.4;
+}
+.age-pill:hover { border-color: var(--muted); color: var(--text); }
+.age-pill.active { border-color: var(--accent2); color: var(--accent2); background: rgba(167,139,250,.1); }
+
+/* Sidebar footer */
+.sidebar-footer {
+  padding: .6rem .6rem 1rem;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* ── BURGER BUTTON (floating, visible when sidebar collapsed) ── */
+.burger-btn {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 300;
+  width: 38px; height: 38px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  cursor: pointer;
+  color: var(--text);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  transition: all .2s;
+  box-shadow: 0 4px 16px rgba(0,0,0,.3);
+}
+.burger-btn:hover { border-color: var(--accent); color: var(--accent); }
+.burger-btn.visible { display: flex; }
+.burger-btn svg { width: 18px; height: 18px; }
+
+/* ── MAIN CONTENT ────────────────────────────────────────── */
+.main {
+  margin-left: var(--sidebar-w);
+  transition: margin-left .3s cubic-bezier(.4,0,.2,1);
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+}
+.main.expanded { margin-left: 0; }
+
+.app {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 6rem;
+}
+
+@media(max-width:900px){
+  .sidebar { transform: translateX(calc(-1 * var(--sidebar-w))); }
+  .sidebar.open { transform: translateX(0); }
+  .burger-btn { display: flex !important; }
+  .sidebar-overlay.visible { display: block; }
+  .main { margin-left: 0 !important; }
+}
+
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="index.html" class="sidebar-logo">Social<span>Proof</span></a>
+    <button class="sidebar-close-btn" onclick="toggleSidebar()" title="Close sidebar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 6L6 18M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="index.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      Evaluate
+    </a>
+    <a href="lessons.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      Lessons
+    </a>
+    <a href="mindmap.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+      Mind Map
+    </a>
+    <a href="dashboard.html" class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </a>
+    <div class="nav-divider"></div>
+    <a href="admin.html" class="nav-item" id="sidebar-admin-link" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+      Admin
+    </a>
+  </nav>
+  <div class="sidebar-section">Age Mode</div>
+  <div class="age-mode-grid">
+    <button class="age-pill" id="age-kids"  onclick="setAgeMode('kids')">🎮<br>Kids</button>
+    <button class="age-pill" id="age-teen"  onclick="setAgeMode('teen')">⚡<br>Teen</button>
+    <button class="age-pill" id="age-adult" onclick="setAgeMode('adult')">📊<br>Adult</button>
+    <button class="age-pill" id="age-older" onclick="setAgeMode('older')">📖<br>Older</button>
+  </div>
+  <div class="sidebar-footer">
+    <a href="login.html" class="nav-item" id="sidebar-login-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+        <polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>
+      </svg>
+      Login
+    </a>
+  </div>
+</aside>
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+<button class="burger-btn" id="burger-btn" onclick="toggleSidebar()" title="Open menu">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <line x1="3" y1="6" x2="21" y2="6"/>
+    <line x1="3" y1="12" x2="21" y2="12"/>
+    <line x1="3" y1="18" x2="21" y2="18"/>
+  </svg>
+</button>
+<div class="main" id="main">
+<div class="app">
+
+<!-- Auth wall -->
+<div id="auth-wall" style="display:none;">
+  <div class="auth-wall">
+    <h3>Dashboard requires an account</h3>
+    <p>Log in to see your evaluation history, MIL skill progress, and personalized learning insights.</p>
+    <a href="login.html" class="btn btn-primary">Log In →</a>
+  </div>
+</div>
+
+<!-- Dashboard content -->
+<div id="dashboard-content" style="display:none;">
+
+  <!-- Welcome -->
+  <div class="welcome">
+    <h2>Welcome back, <span id="username-display">—</span></h2>
+    <p class="welcome-sub" id="welcome-sub">Here's your media literacy progress so far.</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="section-label">Overview</div>
+  <div class="stats-grid" id="stats-grid"><div class="spinner"></div></div>
+
+  <!-- MIL Skill Progress -->
+  <div class="section-label">MIL Skill Progress</div>
+  <div class="skill-grid" id="skill-grid"><div class="spinner"></div></div>
+
+  <!-- Behavior Insight Cards -->
+  <div id="behavior-section" style="display:none;">
+    <div class="section-label">Your Learning Insights</div>
+    <div class="insight-grid" id="insight-grid"></div>
+  </div>
+
+  <!-- Weakness bars -->
+  <div class="section-label">Most Triggered Topics</div>
+  <div id="weakness-area"><div class="spinner"></div></div>
+
+  <!-- History -->
+  <div class="section-label">Your Evaluation History</div>
+  <div id="history-area"><div class="spinner"></div></div>
+
+</div>
+</div>
+
+<script>
+const API_BASE = window.__BACKEND_URL__ || '';
+const _userId   = localStorage.getItem('sp_user_id') ? parseInt(localStorage.getItem('sp_user_id')) : null;
+const _username = localStorage.getItem('sp_username') || 'User';
+
+// ── Age mode ───────────────────────────────────────────────────────────────────
+const AGE_MODES = {
+  kids:  {
+    welcomeSub: "Here's how you're doing! Every evaluation makes you smarter. 🌟",
+    bodyClass:  'age-kids',
+  },
+  teen:  {
+    welcomeSub: "Your MIL stats — keep your streak alive and level up your skills.",
+    bodyClass:  'age-teen',
+  },
+  adult: {
+    welcomeSub: "Here's your media literacy progress so far.",
+    bodyClass:  'age-adult',
+  },
+  older: {
+    welcomeSub: "Here is a clear summary of your media literacy progress and learning areas.",
+    bodyClass:  'age-older',
+  },
+};
+
+function setAgeMode(mode) {
+  localStorage.setItem('sp_age_mode', mode);
+  applyAgeMode(mode);
+}
+
+function applyAgeMode(mode) {
+  // Remove all age classes
+  document.body.classList.remove('age-kids','age-teen','age-adult','age-older');
+  const cfg = AGE_MODES[mode] || AGE_MODES.adult;
+  document.body.classList.add(cfg.bodyClass);
+
+  // Update sub-text
+  const sub = document.getElementById('welcome-sub');
+  if (sub) sub.textContent = cfg.welcomeSub;
+
+  // Update button states
+  document.querySelectorAll('.age-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+}
+
+function initAgeMode() {
+  const saved = localStorage.getItem('sp_age_mode') || 'adult';
+  applyAgeMode(saved);
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function topicName(t) {
+  return {
+    claim_detection:    'Claim Detection',
+    source_verification: 'Source Verification',
+    bias_detection:     'Bias Detection',
+    evidence_evaluation: 'Evidence Evaluation',
+    general:            'General MIL'
+  }[t] || t;
+}
+
+function labelClass(label) {
+  if (!label) return 'pill-none';
+  const l = label.toLowerCase();
+  if (l.includes('credible') || l.includes('true'))  return 'pill-credible';
+  if (l.includes('uncertain') || l.includes('mixed')) return 'pill-uncertain';
+  if (l.includes('misleading') || l.includes('false')) return 'pill-misleading';
+  return 'pill-none';
+}
+
+function confClass(conf) {
+  if (conf === 'high')   return 'conf-high';
+  if (conf === 'medium') return 'conf-medium';
+  return 'conf-low';
+}
+
+function logout() {
+  fetch('/auth/cookie-logout', { method: 'POST', credentials: 'include' }).catch(() => {});
+  localStorage.clear();
+  window.location.href = 'login.html';
+}
+
+// ── Render stats ───────────────────────────────────────────────────────────────
+function renderStats(s) {
+  const grid = document.getElementById('stats-grid');
+  if (!s || !s.total_evaluations) {
+    grid.innerHTML = '<p style="color:var(--muted);font-size:.9rem;">No evaluations yet. <a href="index.html" style="color:var(--accent);">Start your first one →</a></p>';
+    return;
+  }
+
+  grid.innerHTML = `
+    <div class="stat-card">
+      <div class="stat-val blue">${s.total_evaluations}</div>
+      <div class="stat-label">Evaluations</div>
+      <div class="stat-sub">Content pieces analysed</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val green">${s.lessons_completed || 0}</div>
+      <div class="stat-label">Lessons Done</div>
+      <div class="stat-sub">From the Lessons hub</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Day Streak</div>
+    </div>`;
+}
+
+// ── Render MIL skill progress ───────────────────────────────────────────────────
+function renderSkillProgress(skills) {
+  const grid = document.getElementById('skill-grid');
+  if (!skills || !skills.length) {
+    grid.innerHTML = '<p style="color:var(--muted);font-size:.88rem;">Complete evaluations and lessons to build your skill profile.</p>';
+    return;
+  }
+
+  // MIL skill tag labels per topic
+  const milTags = {
+    claim_detection:    'MIL Skill: Understand',
+    source_verification: 'MIL Skill: Evaluate & Assess',
+    bias_detection:     'MIL Skill: Evaluate & Assess',
+    evidence_evaluation: 'MIL Skill: Evaluate & Assess',
+    general:            'MIL Skill: Reflect',
+  };
+
+  grid.innerHTML = skills.map(s => {
+    const accText = s.quiz_accuracy_pct != null
+      ? `${s.quiz_accuracy_pct}% quiz accuracy`
+      : 'No quiz attempts yet';
+    return `
+    <div class="skill-item">
+      <div class="skill-header">
+        <span class="skill-name">${s.display_name}</span>
+        <div class="skill-meta">
+          <span class="skill-accuracy">${accText}</span>
+          <span class="skill-level level-${s.current_level}">${s.current_level}</span>
+        </div>
+      </div>
+      <div class="skill-bar-wrap">
+        <div class="skill-bar ${s.current_level}"></div>
+      </div>
+      <div class="mil-tag">${milTags[s.topic] || 'MIL Skill'}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Render behavior insight cards ───────────────────────────────────────────────
+const INSIGHT_ICONS = {
+  trusts_sources_unchecked: '🔍',
+  trusts_emotional:         '⚠️',
+  skips_claims:             '💡',
+  skips_evidence:           '📄',
+  overconfident:            '🎯',
+};
+
+function renderBehaviorCards(cards) {
+  if (!cards || !cards.length) return;
+  const section = document.getElementById('behavior-section');
+  const grid    = document.getElementById('insight-grid');
+  section.style.display = 'block';
+  grid.innerHTML = cards.map(c => `
+    <div class="insight-card">
+      <div class="insight-icon">${INSIGHT_ICONS[c.flag] || '💡'}</div>
+      <div class="insight-title">${c.title}</div>
+      <div class="insight-body">${c.body}</div>
+      <div class="insight-mil">${c.mil_skill}</div>
+      <a href="${c.action}" class="insight-action">${c.action_label}</a>
+    </div>`).join('');
+}
+
+// ── Render weakness bars ────────────────────────────────────────────────────────
+function renderWeaknesses(triggers) {
+  const area = document.getElementById('weakness-area');
+  if (!triggers || !triggers.length) {
+    area.innerHTML = '<p style="color:var(--muted);font-size:.88rem;margin-bottom:2rem;">No patterns detected yet — keep evaluating to surface your learning gaps.</p>';
+    return;
+  }
+  const max = Math.max(...triggers.map(t => t.trigger_count));
+  area.innerHTML = '<div class="weakness-list">' + triggers.map(t => `
+    <div class="weakness-item">
+      <div class="weakness-header">
+        <span class="weakness-name">${t.display_name || topicName(t.topic)}</span>
+        <span class="weakness-count">Triggered ${t.trigger_count}×</span>
+      </div>
+      <div class="weakness-bar-wrap">
+        <div class="weakness-bar" style="width:${Math.round((t.trigger_count/max)*100)}%"></div>
+      </div>
+    </div>`).join('') + '</div>';
+}
+
+// ── Render history ──────────────────────────────────────────────────────────────
+function renderHistory(history) {
+  const area = document.getElementById('history-area');
+  if (!history || !history.length) {
+    area.innerHTML = '<div class="empty-state">No evaluations yet. <a href="index.html" style="color:var(--accent);">Start evaluating content →</a></div>';
+    return;
+  }
+  const rows = history.map(h => {
+    const date  = h.created_at ? new Date(h.created_at).toLocaleDateString('en-PH',{month:'short',day:'numeric'}) : '—';
+    const score = h.user_score != null ? h.user_score : '—';
+    const conf  = h.confidence_level || null;
+    return `<tr>
+      <td class="content-preview" title="${(h.content_preview||'').replace(/"/g,'&quot;')}">${h.content_preview || '—'}</td>
+      <td><span class="label-pill ${labelClass(h.user_label)}">${h.user_label || 'No verdict'}</span></td>
+      <td>${score}</td>
+      <td>${conf ? `<span class="conf-dot ${confClass(conf)}"></span>${conf}` : '<span style="color:var(--muted)">—</span>'}</td>
+      <td style="font-family:var(--font-mono);font-size:.72rem;color:var(--muted);">${date}</td>
+    </tr>`;
+  }).join('');
+
+  area.innerHTML = `<div style="overflow-x:auto;"><table class="history-table">
+    <thead><tr>
+      <th>Content</th>
+      <th>Your Verdict</th>
+      <th>Your Score</th>
+      <th>Confidence</th>
+      <th>Date</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
+
+// ── Load dashboard ──────────────────────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const res = await fetch(`${API_BASE}/dashboard/${_userId}`, {
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    renderStats(data.stats);
+    renderSkillProgress(data.skill_progress);
+    renderBehaviorCards(data.behavior_cards);
+    renderWeaknesses(data.lesson_triggers);
+    renderHistory(data.history);
+  } catch(e) {
+    document.getElementById('stats-grid').innerHTML = '<p style="color:var(--red);font-size:.88rem;">Could not load dashboard — make sure the API is running.</p>';
+    document.getElementById('skill-grid').innerHTML = '';
+    document.getElementById('weakness-area').innerHTML = '';
+    document.getElementById('history-area').innerHTML  = '';
+    console.error('[Dashboard]', e);
+  }
+}
+
+// ── Sidebar: auth-aware login/logout link ────────────────────────────────────────
+(function() {
+  const username  = localStorage.getItem('sp_username');
+  const role      = localStorage.getItem('sp_role');
+  const loginLink = document.getElementById('sidebar-login-link');
+  const adminLink = document.getElementById('sidebar-admin-link');
+  if (loginLink && username) {
+    loginLink.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout`;
+    loginLink.onclick = async e => {
+      e.preventDefault();
+      await fetch('/auth/cookie-logout', { method:'POST', credentials:'include' }).catch(()=>{});
+      localStorage.clear();
+      window.location.href = 'index.html';
+    };
+    loginLink.href = '#';
+  }
+  if (role === 'admin' && adminLink) adminLink.style.display = 'flex';
+})();
+
+// ── Init ────────────────────────────────────────────────────────────────────────
+initAgeMode();
+
+if (!_userId) {
+  document.getElementById('auth-wall').style.display = 'block';
+} else {
+  document.getElementById('dashboard-content').style.display = 'block';
+  document.getElementById('username-display').textContent = _username;
+  loadDashboard();
+}
+</script>
+</div><!-- /.main -->
+<script>
+// ── Sidebar ────────────────────────────────────────────────
+const sidebar   = document.getElementById('sidebar');
+const mainEl    = document.getElementById('main');
+const burgerBtn = document.getElementById('burger-btn');
+const overlay   = document.getElementById('sidebar-overlay');
+let sidebarOpen = window.innerWidth >= 900;
+
+function initSidebar() {
+  if (window.innerWidth < 900) {
+    sidebar.classList.add('collapsed'); mainEl.classList.add('expanded');
+    burgerBtn.classList.add('visible'); sidebarOpen = false;
+  } else {
+    sidebar.classList.remove('collapsed'); mainEl.classList.remove('expanded');
+    burgerBtn.classList.remove('visible'); sidebarOpen = true;
+  }
+}
+function toggleSidebar() {
+  sidebarOpen = !sidebarOpen;
+  if (sidebarOpen) {
+    sidebar.classList.remove('collapsed');
+    if (window.innerWidth >= 900) mainEl.classList.remove('expanded');
+    else overlay.classList.add('visible');
+    burgerBtn.classList.remove('visible');
+  } else {
+    sidebar.classList.add('collapsed'); mainEl.classList.add('expanded');
+    overlay.classList.remove('visible'); burgerBtn.classList.add('visible');
+  }
+}
+window.addEventListener('resize', initSidebar);
+initSidebar();
+
+// ── Age mode ───────────────────────────────────────────────
+function setAgeMode(mode) {
+  localStorage.setItem('sp_age_mode', mode);
+  document.querySelectorAll('.age-pill').forEach(el => el.classList.remove('active'));
+  const pill = document.getElementById('age-' + mode);
+  if (pill) pill.classList.add('active');
+  // propagate to page-level applyAgeMode if it exists
+  if (typeof applyAgeMode === 'function') applyAgeMode(mode);
+}
+(function restoreAgePill() {
+  const saved = localStorage.getItem('sp_age_mode') || 'adult';
+  document.querySelectorAll('.age-pill').forEach(el => el.classList.remove('active'));
+  const pill = document.getElementById('age-' + saved);
+  if (pill) pill.classList.add('active');
+  if (typeof applyAgeMode === 'function') applyAgeMode(saved);
+})();
+</script>
+<script>
+// ── Auth state → sidebar ────────────────────────────────────
+(function() {
+  const username  = localStorage.getItem('sp_username');
+  const role      = localStorage.getItem('sp_role');
+  const loginLink = document.getElementById('sidebar-login-link');
+  const adminLink = document.getElementById('sidebar-admin-link');
+  if (username && loginLink) {
+    loginLink.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+      <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+    </svg> Log out`;
+    loginLink.href = '#';
+    loginLink.style.color = 'var(--red)';
+    loginLink.onclick = async e => {
+      e.preventDefault();
+      await fetch('/auth/cookie-logout',{method:'POST',credentials:'include'}).catch(()=>{});
+      localStorage.clear(); window.location.href = 'login.html';
+    };
+  }
+  if (role === 'admin' && adminLink) adminLink.style.display = 'flex';
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,2226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="/env-config.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SocialProof — MIL Mind Map</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0b0f1a;
+    --surface:   #111827;
+    --surface2:  #1a2235;
+    --border:    #1e2d44;
+    --center:    #1e3a5f;
+    --center-glow: #2563eb;
+
+    --node-source:    #0e4f3a;
+    --node-bias:      #4a1942;
+    --node-evidence:  #1a3a5c;
+    --node-stats:     #3b2c0a;
+    --node-media:     #2d1a4e;
+    --node-context:   #1a3d2e;
+    --node-emotion:   #4a1a1a;
+    --node-verify:    #1a2e4a;
+    --node-misinfo:   #3a1a0e;
+    --node-share:     #1a3a1a;
+
+    --accent-source:   #10b981;
+    --accent-bias:     #c084fc;
+    --accent-evidence: #60a5fa;
+    --accent-stats:    #fbbf24;
+    --accent-media:    #a78bfa;
+    --accent-context:  #34d399;
+    --accent-emotion:  #f87171;
+    --accent-verify:   #38bdf8;
+    --accent-misinfo:  #fb923c;
+    --accent-share:    #4ade80;
+
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-dim: #475569;
+
+    --radius: 16px;
+    --panel-w: 420px;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: 'Outfit', sans-serif;
+    overflow: hidden;
+  }
+
+  /* ─── CANVAS ─────────────────────────── */
+  #canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%; height: 100vh;
+    overflow: hidden;
+    z-index: 1;
+  }
+  #map-root {
+    position: absolute;
+    width: 2800px; height: 2400px;
+    top: 0; left: 0;
+  }
+
+  /* ─── NODES ─────────────────────────── */
+  .node {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    z-index: 10;
+    transition: transform 0.25s cubic-bezier(.34,1.56,.64,1);
+    user-select: none;
+  }
+  .node:hover { transform: translate(-50%, -50%) scale(1.08); }
+  .node.active { transform: translate(-50%, -50%) scale(1.05); }
+
+  .node-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: var(--radius);
+    border: 1.5px solid;
+    backdrop-filter: blur(12px);
+    transition: box-shadow 0.3s, border-color 0.3s;
+  }
+
+  /* CENTER NODE */
+  .node-center .node-inner {
+    width: 160px; height: 160px;
+    background: radial-gradient(circle at 40% 35%, #1e3a6e, #0b1829);
+    border-color: var(--center-glow);
+    box-shadow: 0 0 40px rgba(37,99,235,0.35), 0 0 0 1px rgba(37,99,235,0.15);
+    border-radius: 50%;
+  }
+  .node-center .node-inner:hover,
+  .node-center.active .node-inner {
+    box-shadow: 0 0 60px rgba(37,99,235,0.55), 0 0 0 2px rgba(37,99,235,0.3);
+  }
+  .node-center .node-icon { font-size: 32px; line-height: 1; }
+  .node-center .node-label {
+    font-family: 'DM Serif Display', serif;
+    font-size: 12px;
+    color: #93c5fd;
+    text-align: center;
+    line-height: 1.3;
+    padding: 0 12px;
+  }
+  .node-center .node-sub {
+    font-size: 10px;
+    color: #60a5fa;
+    font-family: 'DM Mono', monospace;
+    opacity: 0.7;
+    letter-spacing: 0.05em;
+  }
+
+  /* SATELLITE NODES */
+  .node-sat .node-inner {
+    width: 110px; height: 110px;
+    border-radius: 50%;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .node-sat .node-icon { font-size: 24px; line-height: 1; }
+  .node-sat .node-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-align: center;
+    letter-spacing: 0.03em;
+    padding: 0 8px;
+    line-height: 1.3;
+  }
+
+  /* ─── CONNECTOR LINES ─────────────────── */
+  .connector {
+    stroke-width: 1.5;
+    stroke-dasharray: 4 4;
+    opacity: 0;
+    transition: opacity 0.4s, stroke 0.4s;
+    stroke-linecap: round;
+  }
+  .connector.visible { opacity: 0.4; }
+  .connector.active-line { opacity: 0.9; stroke-dasharray: none; }
+
+  /* ─── SIDE PANEL ─────────────────────── */
+  #panel {
+    position: fixed;
+    right: 0; top: 0;
+    width: var(--panel-w);
+    height: 100vh;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    z-index: 100;
+    transform: translateX(100%);
+    transition: transform 0.4s cubic-bezier(.4,0,.2,1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #panel.open { transform: translateX(0); }
+
+  #panel-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 24px 24px 20px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  #panel-icon { font-size: 28px; }
+  #panel-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    color: var(--text-primary);
+    flex: 1;
+  }
+  #panel-close {
+    width: 32px; height: 32px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s, color 0.2s;
+    flex-shrink: 0;
+  }
+  #panel-close:hover { background: var(--surface2); color: var(--text-primary); }
+
+  #panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  #panel-body::-webkit-scrollbar { width: 4px; }
+  #panel-body::-webkit-scrollbar-track { background: transparent; }
+  #panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .panel-section {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .panel-section:last-child { border-bottom: none; }
+
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+
+  .panel-description {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text-secondary);
+  }
+
+  /* MIL question */
+  .mil-question {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-primary);
+    line-height: 1.6;
+    margin-bottom: 16px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: var(--surface2);
+    border-left: 3px solid;
+  }
+
+  /* Classification options */
+  .classif-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .classif-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: transparent;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    text-align: left;
+  }
+  .classif-option:hover { background: var(--surface2); border-color: var(--accent); }
+  .classif-option.selected { background: var(--surface2); border-color: var(--accent); }
+
+  .option-letter {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    width: 22px; height: 22px;
+    min-width: 22px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid;
+    margin-top: 1px;
+  }
+  .classif-option .option-text {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+  .classif-option.selected .option-text { color: var(--text-primary); }
+
+  /* Tip box */
+  .tip-box {
+    display: flex;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    margin-top: 16px;
+  }
+  .tip-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .tip-text { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+  .tip-text strong { color: var(--text-primary); font-weight: 500; }
+
+  /* MIL badge */
+  .mil-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    padding: 4px 10px;
+    border-radius: 100px;
+    border: 1px solid;
+    margin-top: 12px;
+  }
+
+  /* User note */
+  .user-note {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    color: var(--text-primary);
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    resize: none;
+    outline: none;
+    min-height: 72px;
+    transition: border-color 0.2s;
+  }
+  .user-note:focus { border-color: var(--accent, var(--center-glow)); }
+  .user-note::placeholder { color: var(--text-dim); }
+
+  /* ─── INTRO OVERLAY ─────────────────── */
+  #intro {
+    position: fixed; inset: 0;
+    background: rgba(11,15,26,0.92);
+    backdrop-filter: blur(6px);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.5s;
+  }
+  #intro.hidden { opacity: 0; pointer-events: none; }
+
+  .intro-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px 44px;
+    max-width: 480px;
+    text-align: center;
+  }
+  .intro-box .big-icon { font-size: 48px; margin-bottom: 16px; }
+  .intro-box h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px;
+    color: var(--text-primary);
+    margin-bottom: 10px;
+  }
+  .intro-box p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    margin-bottom: 24px;
+  }
+  .intro-box .start-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 28px;
+    background: var(--center-glow);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+  }
+  .intro-box .start-btn:hover { background: #1d4ed8; transform: translateY(-1px); }
+
+  /* ─── TOP BAR ───────────────────────── */
+  #topbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 52px;
+    background: rgba(11,15,26,0.85);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 16px;
+  }
+  .brand {
+    font-family: 'DM Serif Display', serif;
+    font-size: 16px;
+    color: #60a5fa;
+    letter-spacing: 0.02em;
+  }
+  .brand span { color: var(--text-dim); font-size: 12px; font-family: 'DM Mono', monospace; }
+  .progress-track {
+    flex: 1;
+    max-width: 240px;
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-left: auto;
+  }
+  #progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #2563eb, #10b981);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.5s cubic-bezier(.4,0,.2,1);
+  }
+  .progress-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+
+  /* ─── HINT TOAST ────────────────────── */
+  #hint {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 10px 20px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s, transform 0.4s;
+    white-space: nowrap;
+    z-index: 50;
+  }
+  #hint.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ─── COMPLETION PULSE ────────────────── */
+  @keyframes pulse-ring {
+    0% { transform: translate(-50%,-50%) scale(1); opacity: 0.6; }
+    100% { transform: translate(-50%,-50%) scale(1.6); opacity: 0; }
+  }
+  .pulse-ring {
+    position: absolute;
+    pointer-events: none;
+    border-radius: 50%;
+    border: 2px solid;
+    width: 110px; height: 110px;
+    animation: pulse-ring 1s ease-out forwards;
+    z-index: 8;
+  }
+
+  /* ─── NODE COMPLETE DOT ─────────────── */
+  .complete-dot {
+    position: absolute;
+    top: 6px; right: 6px;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: #10b981;
+    border: 2px solid var(--bg);
+    z-index: 15;
+    opacity: 0;
+    transform: scale(0);
+    transition: opacity 0.3s, transform 0.3s cubic-bezier(.34,1.56,.64,1);
+  }
+  .complete-dot.show { opacity: 1; transform: scale(1); }
+
+  /* ─── BG TEXTURE ────────────────────── */
+  #bg-grid {
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(37,99,235,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(37,99,235,0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ─── NODE GLOW ANIMATION ───────────── */
+  @keyframes node-float {
+    0%, 100% { transform: translate(-50%, -50%) translateY(0px); }
+    50% { transform: translate(-50%, -50%) translateY(-4px); }
+  }
+  .node-sat { animation: node-float var(--float-dur, 4s) ease-in-out infinite; }
+
+  @keyframes center-pulse {
+    0%, 100% { box-shadow: 0 0 40px rgba(37,99,235,0.35), 0 0 0 1px rgba(37,99,235,0.15); }
+    50% { box-shadow: 0 0 60px rgba(37,99,235,0.5), 0 0 0 1px rgba(37,99,235,0.25); }
+  }
+  .node-center .node-inner {
+    animation: center-pulse 3s ease-in-out infinite;
+  }
+
+  /* Line animation */
+  @keyframes dash-flow {
+    to { stroke-dashoffset: -20; }
+  }
+  .connector.visible {
+    animation: dash-flow 2s linear infinite;
+  }
+  .connector.active-line { animation: none; }
+
+  /* ─── SIDEBAR ─────────────────────────── */
+.nav-divider{height:1px;background:#1e2d44;margin:.5rem .8rem;}
+
+
+
+*{scrollbar-width:none;-ms-overflow-style:none;}
+*::-webkit-scrollbar{display:none;}
+
+
+.topbar-logo span{font-weight:400;opacity:.45;-webkit-text-fill-color:rgba(241,245,249,.35);}
+
+
+
+
+/* offset canvas below fixed topbar */
+
+
+
+/* ── Sidebar (shared) ─── */
+:root {--sidebar-w:256px;}
+/* ── SIDEBAR ─────────────────────────────────────────────── */
+.sidebar {
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: var(--sidebar-w);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  transition: transform .3s cubic-bezier(.4,0,.2,1);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.sidebar.collapsed { transform: translateX(calc(-1 * var(--sidebar-w))); }
+
+.sidebar-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.5);
+  backdrop-filter: blur(4px);
+  z-index: 190;
+  opacity: 0; pointer-events: none;
+  transition: opacity .3s;
+}
+.sidebar-overlay.visible { opacity: 1; pointer-events: all; }
+
+/* Sidebar header */
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1rem 1rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sidebar-logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: -.02em;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-decoration: none;
+}
+.sidebar-logo span {
+  font-weight: 400;
+  opacity: .55;
+  -webkit-text-fill-color: rgba(232,234,240,.35);
+}
+.sidebar-close-btn {
+  width: 30px; height: 30px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  cursor: pointer;
+  color: var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  transition: all .2s;
+  flex-shrink: 0;
+}
+.sidebar-close-btn:hover { border-color: var(--text); color: var(--text); }
+
+/* Sidebar nav */
+.sidebar-nav {
+  padding: .75rem .6rem;
+  flex: 1;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  padding: .62rem .8rem;
+  border-radius: 9px;
+  text-decoration: none;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  font-size: .78rem;
+  letter-spacing: .04em;
+  transition: all .2s;
+  margin-bottom: .1rem;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+}
+.nav-item:hover { color: var(--text); background: rgba(255,255,255,.04); }
+.nav-item.active { color: var(--accent); background: rgba(79,142,247,.1); }
+.nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+.nav-divider {
+  height: 1px;
+  background: var(--border);
+  margin: .5rem .8rem;
+}
+
+/* Sidebar section labels */
+.sidebar-section {
+  font-family: 'DM Mono', monospace;
+  font-size: .63rem;
+  color: var(--muted);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: .75rem 1rem .4rem;
+}
+
+/* Age mode pills in sidebar */
+.age-mode-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .4rem;
+  padding: .25rem .7rem .75rem;
+}
+.age-pill {
+  padding: .45rem .5rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  font-size: .68rem;
+  cursor: pointer;
+  transition: all .2s;
+  text-align: center;
+  line-height: 1.4;
+}
+.age-pill:hover { border-color: var(--muted); color: var(--text); }
+.age-pill.active { border-color: var(--accent2); color: var(--accent2); background: rgba(167,139,250,.1); }
+
+/* Sidebar footer */
+.sidebar-footer {
+  padding: .6rem .6rem 1rem;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* ── BURGER BUTTON (floating, visible when sidebar collapsed) ── */
+.burger-btn {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 300;
+  width: 38px; height: 38px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  cursor: pointer;
+  color: var(--text);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  transition: all .2s;
+  box-shadow: 0 4px 16px rgba(0,0,0,.3);
+}
+.burger-btn:hover { border-color: var(--accent); color: var(--accent); }
+.burger-btn.visible { display: flex; }
+.burger-btn svg { width: 18px; height: 18px; }
+
+/* ── MAIN CONTENT ────────────────────────────────────────── */
+.main {
+  margin-left: var(--sidebar-w);
+  transition: margin-left .3s cubic-bezier(.4,0,.2,1);
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+}
+.main.expanded { margin-left: 0; }
+
+.app {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 6rem;
+}
+
+@media(max-width:900px){
+  .sidebar { transform: translateX(calc(-1 * var(--sidebar-w))); }
+  .sidebar.open { transform: translateX(0); }
+  .burger-btn { display: flex !important; }
+  .sidebar-overlay.visible { display: block; }
+  .main { margin-left: 0 !important; }
+}
+
+
+/* ══ VISUAL ENHANCEMENTS ══════════════════════════════════════════════════════ */
+
+/* Richer background — radial vignette over grid */
+#bg-grid {
+  background-image:
+    radial-gradient(ellipse 80% 60% at 50% 50%, rgba(37,99,235,0.06) 0%, transparent 70%),
+    linear-gradient(rgba(37,99,235,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37,99,235,0.04) 1px, transparent 1px);
+  background-size: auto, 48px 48px, 48px 48px;
+}
+
+/* Ambient particle layer */
+#particles {
+  position: fixed; inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0;
+  animation: particle-drift var(--dur) ease-in-out var(--delay) infinite;
+}
+@keyframes particle-drift {
+  0%   { transform: translateY(0) scale(1); opacity: 0; }
+  20%  { opacity: var(--op); }
+  80%  { opacity: var(--op); }
+  100% { transform: translateY(-60px) scale(0.6); opacity: 0; }
+}
+
+/* Orbital rings around center */
+.orbit-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(37,99,235,0.12);
+  pointer-events: none;
+  z-index: 2;
+  transform: translate(-50%, -50%);
+  animation: orbit-rotate var(--orbit-dur, 20s) linear infinite;
+}
+.orbit-ring::before {
+  content: '';
+  position: absolute;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--orbit-color, #2563eb);
+  top: -3px; left: 50%;
+  transform: translateX(-50%);
+  box-shadow: 0 0 8px var(--orbit-color, #2563eb);
+}
+@keyframes orbit-rotate {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Entrance animation for nodes */
+@keyframes node-enter {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.4); filter: blur(6px); }
+  60%  { transform: translate(-50%, -50%) scale(1.1); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); filter: blur(0); }
+}
+.node { animation: node-float var(--float-dur, 4s) ease-in-out infinite; }
+.node.entering { animation: node-enter 0.6s cubic-bezier(.34,1.56,.64,1) forwards; }
+.node-center { animation: none !important; }
+
+/* Richer satellite node fills */
+.node-sat .node-inner {
+  box-shadow:
+    0 0 0 1px var(--node-border, rgba(255,255,255,0.08)),
+    0 8px 32px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+  background: radial-gradient(circle at 38% 30%, var(--node-color-hi, rgba(255,255,255,.12)), var(--node-bg, #111) 70%) !important;
+}
+.node-sat:hover .node-inner,
+.node-sat.active .node-inner {
+  box-shadow:
+    0 0 0 1.5px var(--node-accent, rgba(255,255,255,0.3)),
+    0 0 24px var(--node-glow, rgba(255,255,255,0.15)),
+    0 12px 40px rgba(0,0,0,0.6),
+    inset 0 1px 0 rgba(255,255,255,0.1);
+}
+
+/* Richer center node */
+.node-center .node-inner {
+  width: 168px !important; height: 168px !important;
+  background: radial-gradient(circle at 38% 35%,
+    rgba(37,99,235,0.6) 0%, rgba(17,24,39,0.95) 65%) !important;
+  box-shadow:
+    0 0 0 1px rgba(37,99,235,0.4),
+    0 0 50px rgba(37,99,235,0.4),
+    0 0 100px rgba(37,99,235,0.15),
+    inset 0 1px 0 rgba(255,255,255,0.1) !important;
+  animation: center-pulse 3s ease-in-out infinite !important;
+}
+@keyframes center-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px rgba(37,99,235,0.4),
+      0 0 50px rgba(37,99,235,0.4),
+      0 0 100px rgba(37,99,235,0.15),
+      inset 0 1px 0 rgba(255,255,255,0.1);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(37,99,235,0.6),
+      0 0 70px rgba(37,99,235,0.6),
+      0 0 130px rgba(37,99,235,0.25),
+      inset 0 1px 0 rgba(255,255,255,0.15);
+  }
+}
+
+/* Connector lines — colored + glowing */
+.connector {
+  stroke-width: 2;
+  stroke-dasharray: 5 4;
+  opacity: 0;
+  transition: opacity 0.5s, stroke-width 0.3s;
+  stroke-linecap: round;
+  filter: url(#glow-filter);
+}
+.connector.visible {
+  opacity: 0.55;
+  animation: dash-flow 2.5s linear infinite;
+}
+.connector.active-line {
+  opacity: 1;
+  stroke-width: 2.5;
+  stroke-dasharray: none;
+  animation: none;
+  filter: url(#glow-filter-strong);
+}
+@keyframes dash-flow {
+  to { stroke-dashoffset: -18; }
+}
+
+/* Panel — accent header stripe */
+#panel-header {
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+#panel-header::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--panel-accent, linear-gradient(90deg, #2563eb, #10b981));
+  transition: background 0.4s;
+}
+#panel-header::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 120% 80% at 20% 50%, var(--panel-glow, rgba(37,99,235,0.08)), transparent 70%);
+  pointer-events: none;
+  transition: background 0.4s;
+}
+
+/* Completion burst */
+@keyframes burst-scale {
+  0%   { transform: translate(-50%,-50%) scale(0); opacity: 0.8; }
+  60%  { opacity: 0.5; }
+  100% { transform: translate(-50%,-50%) scale(3.5); opacity: 0; }
+}
+.burst-ring {
+  position: absolute;
+  width: 110px; height: 110px;
+  border-radius: 50%;
+  border: 2px solid;
+  pointer-events: none;
+  z-index: 8;
+  animation: burst-scale 0.7s cubic-bezier(.2,.8,.4,1) forwards;
+}
+
+/* Node label font bump */
+.node-sat .node-label {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em !important;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+}
+.node-center .node-label {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.5);
+}
+.node-icon {
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+}
+
+/* ── Completion trophy overlay ── */
+#completion-overlay {
+  position: fixed; inset: 0;
+  background: rgba(11,15,26,0.9);
+  backdrop-filter: blur(10px);
+  z-index: 500;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.5s;
+}
+#completion-overlay.show { opacity: 1; pointer-events: all; }
+.completion-box {
+  background: linear-gradient(135deg, #1e3a5f, #111827);
+  border: 1px solid rgba(37,99,235,0.4);
+  border-radius: 24px;
+  padding: 48px 52px;
+  text-align: center;
+  box-shadow: 0 0 80px rgba(37,99,235,0.3);
+}
+.completion-box .trophy { font-size: 56px; margin-bottom: 16px; display: block; }
+.completion-box h2 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 28px; color: #f1f5f9; margin-bottom: 10px;
+}
+.completion-box p { font-size: 14px; color: #94a3b8; line-height: 1.7; margin-bottom: 28px; }
+.completion-box .close-btn {
+  padding: 12px 32px; background: #2563eb; color: #fff;
+  border: none; border-radius: 12px; cursor: pointer;
+  font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 600;
+  transition: background 0.2s, transform 0.15s;
+}
+.completion-box .close-btn:hover { background: #1d4ed8; transform: translateY(-1px); }
+
+/* ══ END VISUAL ENHANCEMENTS ══════════════════════════════════════════════════ */
+
+
+/* ── Pan/Zoom map-root ─────────────────────────────────────── */
+#map-root {
+  position: absolute;
+  inset: 0;
+  transform-origin: center center;
+  will-change: transform;
+  cursor: grab;
+}
+#map-root.dragging { cursor: grabbing; }
+
+/* Zoom controls */
+#zoom-controls {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+}
+.zoom-btn {
+  width: 36px; height: 36px;
+  background: rgba(17,24,39,0.9);
+  border: 1px solid rgba(30,45,68,0.8);
+  border-radius: 9px;
+  color: #94a3b8;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(8px);
+  transition: border-color .2s, color .2s;
+}
+.zoom-btn:hover { border-color: #60a5fa; color: #f1f5f9; }
+#zoom-pct {
+  font-family: 'DM Mono', monospace;
+  font-size: .62rem;
+  color: #475569;
+  text-align: center;
+  padding: .2rem 0;
+  letter-spacing: .05em;
+}
+
+/* ── Sub-nodes ─────────────────────────────────────────────── */
+.node-sub-node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  z-index: 9;
+  transition: transform 0.2s cubic-bezier(.34,1.56,.64,1), opacity 0.3s;
+}
+.node-sub-node:hover { transform: translate(-50%, -50%) scale(1.12); }
+.node-sub-node.active { transform: translate(-50%, -50%) scale(1.08); }
+
+.sub-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 74px; height: 74px;
+  border-radius: 50%;
+  border: 1.5px solid;
+  backdrop-filter: blur(10px);
+  transition: box-shadow 0.25s;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+.node-sub-node:hover .sub-inner,
+.node-sub-node.active .sub-inner {
+  box-shadow: 0 0 18px var(--sub-glow, rgba(255,255,255,.2)), 0 6px 22px rgba(0,0,0,0.5);
+}
+.sub-icon  { font-size: 16px; line-height: 1; }
+.sub-label {
+  font-size: 8.5px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.25;
+  padding: 0 6px;
+  letter-spacing: 0.03em;
+}
+
+/* Sub-connector lines */
+.sub-connector {
+  stroke-width: 1.2;
+  stroke-dasharray: 3 3;
+  opacity: 0;
+  transition: opacity 0.5s;
+  stroke-linecap: round;
+}
+.sub-connector.visible { opacity: 0.35; }
+.sub-connector.active-line { opacity: 0.75; stroke-dasharray: none; }
+
+/* Checklist panel section */
+.checklist-wrap { display: flex; flex-direction: column; gap: .55rem; margin-top: .5rem; }
+.checklist-item {
+  display: flex; align-items: flex-start; gap: .7rem;
+  padding: .6rem .85rem;
+  border-radius: 9px;
+  background: rgba(17,24,39,0.6);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: background .2s, border-color .2s;
+}
+.checklist-item:hover { background: rgba(30,45,68,0.7); }
+.checklist-item.checked { border-color: var(--check-color, #10b981); background: rgba(16,185,129,0.08); }
+.check-box {
+  width: 17px; height: 17px; min-width: 17px;
+  border-radius: 5px;
+  border: 1.5px solid #475569;
+  margin-top: 1px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px;
+  transition: background .2s, border-color .2s;
+}
+.checklist-item.checked .check-box {
+  background: var(--check-color, #10b981);
+  border-color: var(--check-color, #10b981);
+  color: #000;
+}
+.check-text {
+  font-size: 12.5px;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+.checklist-item.checked .check-text { color: #e2e8f0; }
+.sub-panel-back {
+  display: inline-flex; align-items: center; gap: .4rem;
+  font-family: 'DM Mono', monospace; font-size: .72rem;
+  color: #475569; cursor: pointer; margin-bottom: 1rem;
+  background: none; border: none; padding: 0;
+  transition: color .2s;
+}
+.sub-panel-back:hover { color: #94a3b8; }
+
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="index.html" class="sidebar-logo">Social<span>Proof</span></a>
+    <button class="sidebar-close-btn" onclick="toggleSidebar()" title="Close sidebar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 6L6 18M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="index.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      Evaluate
+    </a>
+    <a href="lessons.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      Lessons
+    </a>
+    <a href="mindmap.html" class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+      Mind Map
+    </a>
+    <a href="dashboard.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </a>
+    <div class="nav-divider"></div>
+    <a href="admin.html" class="nav-item" id="sidebar-admin-link" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+      Admin
+    </a>
+  </nav>
+  <div class="sidebar-section">Age Mode</div>
+  <div class="age-mode-grid">
+    <button class="age-pill" id="age-kids"  onclick="setAgeMode('kids')">🎮<br>Kids</button>
+    <button class="age-pill" id="age-teen"  onclick="setAgeMode('teen')">⚡<br>Teen</button>
+    <button class="age-pill" id="age-adult" onclick="setAgeMode('adult')">📊<br>Adult</button>
+    <button class="age-pill" id="age-older" onclick="setAgeMode('older')">📖<br>Older</button>
+  </div>
+  <div class="sidebar-footer">
+    <a href="login.html" class="nav-item" id="sidebar-login-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+        <polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>
+      </svg>
+      Login
+    </a>
+  </div>
+</aside>
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+<button class="burger-btn" id="burger-btn" onclick="toggleSidebar()" title="Open menu">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <line x1="3" y1="6" x2="21" y2="6"/>
+    <line x1="3" y1="12" x2="21" y2="12"/>
+    <line x1="3" y1="18" x2="21" y2="18"/>
+  </svg>
+</button>
+<div class="main" id="main">
+<div id="bg-grid"></div>
+
+<!-- Particles -->
+<div id="particles"></div>
+
+<!-- Completion overlay -->
+<div id="completion-overlay">
+  <div class="completion-box">
+    <span class="trophy">🏆</span>
+    <h2>All 10 lenses explored!</h2>
+    <p>You've worked through every critical thinking dimension of this content.<br>
+       Head to your dashboard to see your progress, or keep refining your assessment.</p>
+    <button class="close-btn" onclick="document.getElementById('completion-overlay').classList.remove('show')">
+      View Summary →
+    </button>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="brand">SocialProof <span>MIL MAP</span></div>
+  <div style="flex:1"></div>
+  <div class="progress-label" id="progress-text">0 / 10 nodes explored</div>
+  <div class="progress-track"><div id="progress-fill"></div></div>
+</div>
+
+<!-- INTRO -->
+<div id="intro">
+  <div class="intro-box">
+    <div class="big-icon">🧭</div>
+    <h1>MIL Mind Map</h1>
+    <p>Navigate 10 critical thinking lenses to evaluate any piece of content. Click the center node to begin, then explore each satellite at your own pace.</p>
+    <button class="start-btn" onclick="dismissIntro()">Start Exploring →</button>
+  </div>
+</div>
+
+<!-- CANVAS -->
+<div id="canvas">
+  <div id="map-root">
+    <svg id="lines" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible;"></svg>
+    <!-- nodes injected by JS -->
+  </div>
+</div>
+
+<!-- Zoom controls -->
+<div id="zoom-controls">
+  <button class="zoom-btn" onclick="adjustZoom(0.15)" title="Zoom in">+</button>
+  <div id="zoom-pct">85%</div>
+  <button class="zoom-btn" onclick="adjustZoom(-0.15)" title="Zoom out">−</button>
+  <button class="zoom-btn" onclick="resetZoom()" title="Reset" style="font-size:.7rem;letter-spacing:.02em;">⌂</button>
+</div>
+
+<!-- SIDE PANEL -->
+<div id="panel">
+  <div id="panel-header">
+    <div id="panel-icon">🔍</div>
+    <div id="panel-title">Node</div>
+    <button id="panel-close" onclick="closePanel()">✕</button>
+  </div>
+  <div id="panel-body"></div>
+</div>
+
+<div id="hint">Click a node to explore this lens</div>
+
+<script>
+// ─── NODE DEFINITIONS ─────────────────────────────────────────────────────────
+const NODES = [
+  {
+    id: 'center',
+    icon: '🧩',
+    label: 'Can I trust\nthis content?',
+    sub: 'START HERE',
+    type: 'center',
+    color: '#2563eb',
+    bg: 'node-center',
+    angle: null,
+    dist: 0,
+    description: 'This is your starting point. Before evaluating any claim, content, or source — pause and ask: what do I already assume about this? Your first instinct matters, but so does the process that follows.',
+    milQuestion: 'Before you analyze anything — what\'s your gut reaction to this content?',
+    milBadge: 'MIL Skill: Reflect & Question',
+    tip: { icon: '💡', text: '<strong>Why this matters:</strong> Studies show people form initial judgments in seconds. The Mind Map helps you slow down and examine those assumptions systematically.' },
+    classifications: [
+      { letter: 'A', text: 'My initial reaction is that it\'s credible — I feel like trusting it' },
+      { letter: 'B', text: 'I\'m skeptical — something feels off but I can\'t pinpoint it yet' },
+      { letter: 'C', text: 'I genuinely don\'t know — I need to investigate before forming a view' },
+      { letter: 'D', text: 'My reaction is emotional — this content provoked a strong feeling in me' },
+    ]
+  },
+  {
+    id: 'source',
+    icon: '🔗',
+    label: 'Source\nCredibility',
+    type: 'sat',
+    color: '#10b981',
+    bg: '#0e4f3a',
+    angle: -72, dist: 310,
+    floatDur: '4.2s',
+    description: 'Who or what produced this content? A credible source has transparent authorship, editorial standards, a track record of accuracy, and accountability for errors. Source credibility doesn\'t guarantee truth — but low credibility is a strong signal to investigate further.',
+    milQuestion: 'How credible is the source of this content?',
+    milBadge: 'MIL Skill: Access & Evaluate',
+    tip: { icon: '🔎', text: '<strong>Check:</strong> Is there a named author? What is their background? Does the domain have a history of corrections? Is it independently verified? MBFC and SimilarWeb can help assess domain credibility.' },
+    classifications: [
+      { letter: 'A', text: 'Credible — established outlet, named author, editorial accountability' },
+      { letter: 'B', text: 'Partially credible — some verification exists but gaps remain' },
+      { letter: 'C', text: 'Uncertain — no clear author, no editorial history, unfamiliar domain' },
+      { letter: 'D', text: 'Low credibility — known to publish misleading or unverified content' },
+      { letter: 'E', text: 'No source — anonymous post, screenshot, or unattributed claim' },
+    ]
+  },
+  {
+    id: 'bias',
+    icon: '⚖️',
+    label: 'Bias &\nFraming',
+    type: 'sat',
+    color: '#c084fc',
+    bg: '#4a1942',
+    angle: -36, dist: 320,
+    floatDur: '5.1s',
+    description: 'All content involves framing choices — what to include, what to omit, and how to word things. Bias isn\'t always dishonest, but it shapes perception. Look for emotionally loaded language, one-sided presentations, and rhetorical tactics designed to bypass your critical thinking.',
+    milQuestion: 'How is this content framed, and does the language seem loaded?',
+    milBadge: 'MIL Skill: Analyze & Evaluate',
+    tip: { icon: '⚡', text: '<strong>Watch for:</strong> Words like "shocking," "proven," "experts say," sweeping generalizations, urgency framing, and omitting counterarguments. These are bias signals, not automatic disqualifiers.' },
+    classifications: [
+      { letter: 'A', text: 'Neutral / balanced — presents multiple perspectives fairly' },
+      { letter: 'B', text: 'Mild slant — leans in one direction but not manipulatively' },
+      { letter: 'C', text: 'Clear bias — one-sided framing, loaded language, missing counterpoint' },
+      { letter: 'D', text: 'Manipulative — uses emotional triggers, fear, or urgency to bypass reason' },
+      { letter: 'E', text: 'Unclear — can\'t assess framing without more context' },
+    ]
+  },
+  {
+    id: 'evidence',
+    icon: '📋',
+    label: 'Evidence\n& Claims',
+    type: 'sat',
+    color: '#60a5fa',
+    bg: '#1a3a5c',
+    angle: 0, dist: 315,
+    floatDur: '3.8s',
+    description: 'Are the claims in this content supported by evidence? A claim is a statement presented as fact. Evidence is what backs it up — studies, data, firsthand testimony, or expert consensus. The strength and relevance of evidence matters as much as its existence.',
+    milQuestion: 'What specific claims are being made, and what evidence supports them?',
+    milBadge: 'MIL Skill: Evaluate & Assess',
+    tip: { icon: '🧪', text: '<strong>Test it:</strong> Can you find the original source of the evidence cited? Is it peer-reviewed or verified? Does the evidence actually prove the claim, or just seem related to it?' },
+    classifications: [
+      { letter: 'A', text: 'Well-supported — claims are backed by strong, verifiable evidence' },
+      { letter: 'B', text: 'Partially supported — some evidence exists but key claims are unverified' },
+      { letter: 'C', text: 'Unsupported — claims made without any cited evidence' },
+      { letter: 'D', text: 'Contradicted — evidence found that directly disputes the claims' },
+      { letter: 'E', text: 'Not a factual claim — this is opinion, satire, or clearly subjective' },
+    ]
+  },
+  {
+    id: 'stats',
+    icon: '📊',
+    label: 'Data &\nStatistics',
+    type: 'sat',
+    color: '#fbbf24',
+    bg: '#3b2c0a',
+    angle: 36, dist: 320,
+    floatDur: '4.7s',
+    description: 'Numbers can tell true stories deceptively. A statistic may be accurate but stripped of context, cherry-picked from a broader dataset, displayed on a misleading chart axis, or compared to an irrelevant baseline. Always ask: accurate compared to what? Over what time period? From what sample?',
+    milQuestion: 'Are the numbers and data in this content presented accurately and in context?',
+    milBadge: 'MIL Skill: Evaluate & Assess',
+    tip: { icon: '📉', text: '<strong>Red flags:</strong> Charts that don\'t start at zero, percentages without sample sizes, "studies show" without citing the actual study, and stats without a timeframe or geographic scope.' },
+    classifications: [
+      { letter: 'A', text: 'Accurate and in context — numbers are sourced and presented fairly' },
+      { letter: 'B', text: 'Accurate but misleading presentation — technically true, visually deceptive' },
+      { letter: 'C', text: 'Incomplete — statistics are present but missing key context' },
+      { letter: 'D', text: 'Incorrect or manipulated — numbers appear fabricated or distorted' },
+      { letter: 'E', text: 'No data — content makes numerical claims without any cited statistics' },
+    ]
+  },
+  {
+    id: 'media',
+    icon: '🖼️',
+    label: 'Images\n& Media',
+    type: 'sat',
+    color: '#a78bfa',
+    bg: '#2d1a4e',
+    angle: 72, dist: 310,
+    floatDur: '4.4s',
+    description: 'Images and videos have become primary vectors for misinformation. A real photo used in the wrong context, a deepfake, a screenshot of a fake account, or an AI-generated image can all create false impressions. Reverse image search and metadata tools help verify media.',
+    milQuestion: 'Is the media in this content authentic and used in the correct context?',
+    milBadge: 'MIL Skill: Evaluate & Access',
+    tip: { icon: '🔍', text: '<strong>Tools:</strong> Google Reverse Image Search, TinEye, InVID/WeVerify. Check if the image matches the date and location claimed. AI-generated images often show unnatural hands, lighting inconsistencies, or blurred backgrounds.' },
+    classifications: [
+      { letter: 'A', text: 'Authentic and correctly used — media matches the claim and context' },
+      { letter: 'B', text: 'Authentic but misleading context — real media used to support a false narrative' },
+      { letter: 'C', text: 'Edited or altered — genuine media that has been cropped, modified, or manipulated' },
+      { letter: 'D', text: 'Fabricated — AI-generated, deepfake, or entirely fictional media' },
+      { letter: 'E', text: 'Unable to verify — media could not be traced to a reliable origin' },
+    ]
+  },
+  {
+    id: 'context',
+    icon: '🗺️',
+    label: 'Context\nCheck',
+    type: 'sat',
+    color: '#34d399',
+    bg: '#1a3d2e',
+    angle: 108, dist: 315,
+    floatDur: '5.3s',
+    description: 'Information stripped of its context can mean something entirely different. A quote taken out of a speech, a study result without its methodology, or a news story missing its timeframe — context shapes meaning. Ask: what am I not being told here?',
+    milQuestion: 'Does this content provide enough context to understand the full picture?',
+    milBadge: 'MIL Skill: Understand & Reflect',
+    tip: { icon: '📅', text: '<strong>Ask yourself:</strong> When was this published? Is this outdated content presented as current? What perspective or detail seems deliberately absent? What would change if the full context were provided?' },
+    classifications: [
+      { letter: 'A', text: 'Full context provided — information is presented with sufficient background' },
+      { letter: 'B', text: 'Partial context — some relevant background is present but key details are missing' },
+      { letter: 'C', text: 'Context missing — claim is made without the surrounding information needed to evaluate it' },
+      { letter: 'D', text: 'Context distorted — surrounding detail is present but actively misleads the reader' },
+    ]
+  },
+  {
+    id: 'emotion',
+    icon: '🎭',
+    label: 'Emotional\nManipulation',
+    type: 'sat',
+    color: '#f87171',
+    bg: '#4a1a1a',
+    angle: 144, dist: 320,
+    floatDur: '3.9s',
+    description: 'Content designed to provoke strong emotion — fear, outrage, pride, disgust — bypasses rational evaluation. This is not inherently dishonest: emotions can legitimately motivate action. But manufactured emotional urgency is one of the most effective tools of disinformation. If it makes you want to share immediately, pause.',
+    milQuestion: 'Is this content designed to provoke emotion rather than inform?',
+    milBadge: 'MIL Skill: Reflect & Evaluate',
+    tip: { icon: '🧠', text: '<strong>The STOP check:</strong> Before sharing, Stop. Take a breath. Observe what you\'re feeling. Proceed with curiosity, not urgency. Strong emotional reactions are a signal to investigate, not to act.' },
+    classifications: [
+      { letter: 'A', text: 'Neutral tone — informs without appealing primarily to emotion' },
+      { letter: 'B', text: 'Mild emotional appeal — uses feeling appropriately to illustrate a point' },
+      { letter: 'C', text: 'Strong emotional framing — designed to provoke reaction before thought' },
+      { letter: 'D', text: 'Extreme manipulation — fear-based, crisis-framing, urgent calls to share or act' },
+    ]
+  },
+  {
+    id: 'verify',
+    icon: '✅',
+    label: 'Verification\nStatus',
+    type: 'sat',
+    color: '#38bdf8',
+    bg: '#1a2e4a',
+    angle: -144, dist: 320,
+    floatDur: '4.9s',
+    description: 'Has this claim or content been checked by a recognized fact-checking organization? IFCN-certified outlets like Vera Files PH, AFP Fact Check, PolitiFact, Snopes, and FactCheck.org review widely circulating claims. A fact-check result is a signal, not a verdict — use it as one input among many.',
+    milQuestion: 'Has this content or claim been reviewed by a fact-checker?',
+    milBadge: 'MIL Skill: Access & Evaluate',
+    tip: { icon: '🌐', text: '<strong>Philippine resources:</strong> Vera Files PH (verafiles.org), Tsek.ph, AFP Fact Check Philippines. Google Fact Check Explorer searches 100+ IFCN-certified fact-checkers simultaneously.' },
+    classifications: [
+      { letter: 'A', text: 'Verified true — confirmed accurate by a credible fact-checking organization' },
+      { letter: 'B', text: 'Mostly true — accurate in substance with minor missing details or overstatements' },
+      { letter: 'C', text: 'Unverified — no fact-check found; cannot confirm or deny' },
+      { letter: 'D', text: 'Mostly false — contains significant inaccuracies or misleading framing' },
+      { letter: 'E', text: 'False — confirmed inaccurate by credible fact-checkers with evidence' },
+    ]
+  },
+  {
+    id: 'misinfo',
+    icon: '🕵️',
+    label: 'Misinfo\nType',
+    type: 'sat',
+    color: '#fb923c',
+    bg: '#3a1a0e',
+    angle: -108, dist: 315,
+    floatDur: '4.1s',
+    description: 'Not all false or misleading content is the same. Intent matters: was this wrong by mistake, or was it deliberately engineered to deceive? Understanding the type of misinformation helps you understand how it spread, who it targeted, and why it\'s persuasive.',
+    milQuestion: 'If this content is inaccurate or misleading — what type does it appear to be?',
+    milBadge: 'MIL Skill: Understand & Analyze',
+    tip: { icon: '📖', text: '<strong>UNESCO framework:</strong> Misinformation (wrong, unintentional), Disinformation (wrong, intentional), Malinformation (true but weaponized to harm). Most harmful viral content is disinformation — deliberately engineered to spread.' },
+    classifications: [
+      { letter: 'A', text: 'No misinformation — content appears accurate and responsibly framed' },
+      { letter: 'B', text: 'Misinformation — false or misleading content shared without intent to deceive' },
+      { letter: 'C', text: 'Disinformation — deliberately false content engineered to manipulate' },
+      { letter: 'D', text: 'Satire or parody — not intended to deceive, but easily mistaken for fact' },
+      { letter: 'E', text: 'Malinformation — true information weaponized to cause harm or manipulate' },
+    ]
+  },
+  {
+    id: 'share',
+    icon: '📤',
+    label: 'Sharing\nDecision',
+    type: 'sat',
+    color: '#4ade80',
+    bg: '#1a3a1a',
+    angle: -180, dist: 310,
+    floatDur: '5.5s',
+    description: 'You are the last line of defense before content reaches your network. Sharing without verification amplifies misinformation — even when your intent is good. Your network trusts you. What you share shapes what they believe.',
+    milQuestion: 'After working through the other lenses — what is your responsible sharing decision?',
+    milBadge: 'MIL Skill: Act Responsibly',
+    tip: { icon: '🤝', text: '<strong>WEF MIL 2025:</strong> Responsible sharing means actively seeking evidence-based information, adding context when sharing, and holding yourself accountable to your network — not just forwarding what feels true.' },
+    classifications: [
+      { letter: 'A', text: 'Safe to share — content is accurate, credible, and in context' },
+      { letter: 'B', text: 'Share with context added — content has value but needs a note or caveat when shared' },
+      { letter: 'C', text: 'Verify first — promising but not yet confirmed; investigate before sharing' },
+      { letter: 'D', text: 'Do not share — content is misleading, manipulative, or unverified' },
+    ]
+  },
+];
+
+// ─── SUB-NODE DEFINITIONS ──────────────────────────────────────────────────────
+// Each entry: parentId, id, icon, label, color (inherits parent if omitted), checklist[]
+const SUB_NODES = [
+  // Source Credibility
+  { parentId:'source', id:'source-author', icon:'✍️', label:'Named\nAuthor',
+    checklist:['Is a specific author credited by name?','Can you find their professional bio or prior work?','Have they written on this topic elsewhere?'] },
+  { parentId:'source', id:'source-domain', icon:'🌐', label:'Domain\nHistory',
+    checklist:['How old is the domain? (check WHOIS)','Does it appear on MBFC or Media Bias/Fact Check?','Has it published formal corrections before?'] },
+  { parentId:'source', id:'source-editorial', icon:'📋', label:'Editorial\nStandards',
+    checklist:['Does the site have a visible About / Who We Are page?','Do articles link to their primary sources?','Is funding or ownership disclosed?'] },
+
+  // Bias & Framing
+  { parentId:'bias', id:'bias-language', icon:'🗣️', label:'Loaded\nLanguage',
+    checklist:['Count emotionally charged adjectives in the first paragraph.','Would swapping to neutral synonyms change the impression?','Are labels applied selectively to one side only?'] },
+  { parentId:'bias', id:'bias-omission', icon:'🕳️', label:'Omission',
+    checklist:['What perspective or group is not quoted or represented?','What fact, if added, would change the conclusion?','Is the headline consistent with what the body actually says?'] },
+  { parentId:'bias', id:'bias-rhetoric', icon:'📢', label:'Rhetorical\nTactics',
+    checklist:['Is there a false urgency ("act now", "before it\'s too late")?','Are sweeping generalizations made without evidence?','Is fear, disgust, or pride being used to bypass reasoning?'] },
+
+  // Evidence & Claims
+  { parentId:'evidence', id:'evidence-isolation', icon:'🎯', label:'Claim\nIsolation',
+    checklist:['Write out the exact factual claim in one sentence.','Is it testable and potentially falsifiable?','Is it a claim of fact, opinion, or prediction?'] },
+  { parentId:'evidence', id:'evidence-source', icon:'📎', label:'Evidence\nSource',
+    checklist:['Is the study or data actually linked — not just mentioned?','Who funded the research? Any conflict of interest?','Was it published in a peer-reviewed journal?'] },
+  { parentId:'evidence', id:'evidence-strength', icon:'⚖️', label:'Evidence\nStrength',
+    checklist:['Is this one study or scientific consensus?','Does the evidence prove causation or just correlation?','How recent is the data? Has it been replicated?'] },
+
+  // Data & Statistics
+  { parentId:'stats', id:'stats-sample', icon:'👥', label:'Sample\nSize',
+    checklist:['How many subjects or data points were in the study?','Is the sample representative of the population claimed?','Is the margin of error reported?'] },
+  { parentId:'stats', id:'stats-chart', icon:'📉', label:'Chart\nIntegrity',
+    checklist:['Does the Y-axis start at zero, or is it truncated to exaggerate change?','Are the comparison groups meaningful and fairly chosen?','Is the chart type appropriate for the data shown?'] },
+  { parentId:'stats', id:'stats-timeframe', icon:'📅', label:'Timeframe',
+    checklist:['What specific time period does this statistic cover?','Is the baseline year cherry-picked to support the conclusion?','Has anything significant changed since this data was collected?'] },
+
+  // Images & Media
+  { parentId:'media', id:'media-reverse', icon:'🔎', label:'Reverse\nSearch',
+    checklist:['Run Google Reverse Image Search on key images.','Check TinEye for earlier appearances of the image.','Does the earliest dated version match the claim\'s date and location?'] },
+  { parentId:'media', id:'media-metadata', icon:'🗂️', label:'Metadata\nCheck',
+    checklist:['Check EXIF data — when was the file actually created?','Has the image been edited according to its metadata?','Does the file format and compression match the claimed origin?'] },
+  { parentId:'media', id:'media-ai', icon:'🤖', label:'AI / Deepfake\nCheck',
+    checklist:['Examine hands, fingers, and ears for distortion.','Is background lighting consistent with foreground subjects?','Run through an AI image detector (Hive Moderation, AI or Not).'] },
+
+  // Context Check
+  { parentId:'context', id:'context-date', icon:'🗓️', label:'Publication\nDate',
+    checklist:['When was this originally published?','Is it being shared as if it\'s current news?','Has the situation described changed since publication?'] },
+  { parentId:'context', id:'context-missing', icon:'🔭', label:'Missing\nContext',
+    checklist:['Who else is affected by this story who isn\'t mentioned?','What does the opposing or alternative perspective say?','What single piece of additional context would most change your reading?'] },
+  { parentId:'context', id:'context-quote', icon:'💬', label:'Quote\nContext',
+    checklist:['Is any quote shown in full or is it extracted from a longer statement?','Does reading the full surrounding paragraph change its meaning?','Who is the speaker and what was the original occasion?'] },
+
+  // Emotional Manipulation
+  { parentId:'emotion', id:'emotion-stop', icon:'✋', label:'STOP\nCheck',
+    checklist:['Stop — don\'t act on your first reaction.','Take a breath and name the emotion you\'re feeling.','Observe: is the feeling coming from the content or from prior belief?','Proceed with curiosity, not urgency.'] },
+  { parentId:'emotion', id:'emotion-urgency', icon:'⏰', label:'Urgency\nSignals',
+    checklist:['Does the content demand immediate action or sharing?','Is a countdown, deadline, or worst-case scenario implied?','Would the urgency disappear if you waited 24 hours to verify?'] },
+  { parentId:'emotion', id:'emotion-identity', icon:'🪞', label:'Identity\nTriggers',
+    checklist:['Does the content appeal to your group, nationality, or beliefs?','Would you react the same way if it targeted your own side?','Is "us vs. them" framing used to short-circuit critical thinking?'] },
+
+  // Verification Status
+  { parentId:'verify', id:'verify-ph', icon:'🇵🇭', label:'PH Fact\nCheckers',
+    checklist:['Search verafiles.org for the claim or headline.','Check Tsek.ph — collects multiple PH fact-checkers.','Search AFP Fact Check Philippines for recent checks.'] },
+  { parentId:'verify', id:'verify-google', icon:'🔍', label:'Google Fact\nCheck Tool',
+    checklist:['Go to factchecktools.google.com.','Search the exact claim in quotation marks.','Filter by date — older checks may no longer apply.'] },
+  { parentId:'verify', id:'verify-intl', icon:'🌍', label:'International\nCheckers',
+    checklist:['Check snopes.com for viral claims.','Search PolitiFact for statements by public figures.','Use Duke Reporters\' Lab to find IFCN-certified checkers by country.'] },
+
+  // Misinfo Type
+  { parentId:'misinfo', id:'misinfo-intent', icon:'🎭', label:'Intent\nCheck',
+    checklist:['Is this from a domain with a documented history of fabrication?','Does the account spreading it have political or financial motivation?','Is the headline designed to mislead even if the body is technically accurate?'] },
+  { parentId:'misinfo', id:'misinfo-spread', icon:'📡', label:'Spread\nPattern',
+    checklist:['Is it going viral unusually fast for its subject matter?','Are the earliest shares from coordinated or bot-like accounts?','Is engagement (likes/shares) disproportionate to comments?'] },
+  { parentId:'misinfo', id:'misinfo-type', icon:'📖', label:'UNESCO\nFramework',
+    checklist:['Wrong but unintentional → Misinformation. Correct the sharer kindly.','Wrong and deliberate → Disinformation. Don\'t amplify; report if possible.','True but weaponized to harm → Malinformation. Consider whether sharing serves a legitimate purpose.'] },
+
+  // Sharing Decision
+  { parentId:'share', id:'share-precheck', icon:'✅', label:'Pre-Share\nCheck',
+    checklist:['Have you verified the core claim through at least two independent sources?','Is the framing your own addition, or are you copying someone else\'s spin?','Would you be comfortable if the original author saw your share?'] },
+  { parentId:'share', id:'share-context', icon:'📝', label:'Adding\nContext',
+    checklist:['Can you add a sentence explaining what the caveats are?','Should you link to a fact-check alongside the content?','Is no-share or share-with-correction a better option than silent sharing?'] },
+  { parentId:'share', id:'share-network', icon:'👁️', label:'Your\nNetwork',
+    checklist:['Who will see this — is anyone in your network vulnerable to this type of content?','Are you the most credible person in your network to share this?','Will sharing add value, or just amplify noise?'] },
+];
+
+// ─── STATE ─────────────────────────────────────────────────────────────────────
+const state = {
+  activeNode: null,
+  completed: new Set(),
+  selections: {},
+  notes: {},
+};
+
+// ─── LAYOUT ────────────────────────────────────────────────────────────────────
+// ─── MAP ROOT: fixed world origin (large canvas)
+const MAP_W = 2800, MAP_H = 2400;
+function getCenter() { return { x: MAP_W / 2, y: MAP_H / 2 }; }
+
+function nodePosition(node) {
+  const c = getCenter();
+  if (node.type === 'center') return { x: c.x, y: c.y };
+  const rad = (node.angle * Math.PI) / 180;
+  return {
+    x: c.x + Math.cos(rad) * node.dist,
+    y: c.y + Math.sin(rad) * node.dist,
+  };
+}
+
+// Sub-node position: fan outward from parent satellite
+function subNodePosition(sub) {
+  const parent = NODES.find(n => n.id === sub.parentId);
+  if (!parent) return { x: 0, y: 0 };
+  const parentPos = nodePosition(parent);
+  // angle away from center
+  const parentRad = (parent.angle * Math.PI) / 180;
+  const siblings   = SUB_NODES.filter(s => s.parentId === sub.parentId);
+  const idx        = siblings.indexOf(sub);
+  const count      = siblings.length;
+  // fan angle: spread siblings ±35° around the parent's outward direction
+  const spread     = count === 1 ? 0 : 70 / (count - 1);
+  const startAngle = parentRad - (spread * (count - 1) / 2) * (Math.PI / 180);
+  const angleStep  = spread * (Math.PI / 180);
+  const subRad     = startAngle + idx * angleStep;
+  const dist       = 155; // distance from parent center to sub-node center
+  return {
+    x: parentPos.x + Math.cos(subRad) * dist,
+    y: parentPos.y + Math.sin(subRad) * dist,
+  };
+}
+
+// ─── RENDER ────────────────────────────────────────────────────────────────────
+function renderNodes() {
+  const mapRoot = document.getElementById('map-root');
+  // Remove existing node + sub-node els
+  mapRoot.querySelectorAll('.node, .node-sub-node').forEach(n => n.remove());
+
+  NODES.forEach(node => {
+    const pos = nodePosition(node);
+    const el = document.createElement('div');
+    el.className = `node node-${node.type === 'center' ? 'center' : 'sat'}`;
+    el.id = `node-${node.id}`;
+    el.style.left = pos.x + 'px';
+    el.style.top = pos.y + 'px';
+    if (node.floatDur) el.style.setProperty('--float-dur', node.floatDur);
+    // stagger floats
+    if (node.type !== 'center') el.style.animationDelay = (Math.random() * 2) + 's';
+
+    const inner = document.createElement('div');
+    inner.className = 'node-inner';
+    inner.style.borderColor = node.color + '55';
+    inner.style.background = `radial-gradient(circle at 40% 35%, ${node.color}18, ${node.bg || '#111'}cc)`;
+    // Inject per-node glow CSS vars for hover/active states
+    if (node.type !== 'center') {
+      el.style.setProperty('--node-color-hi', node.color + '25');
+      el.style.setProperty('--node-bg', node.bg || '#111');
+      el.style.setProperty('--node-accent', node.color + 'cc');
+      el.style.setProperty('--node-glow', node.color + '40');
+      el.style.setProperty('--node-border', node.color + '44');
+      inner.style.setProperty('--node-color-hi', node.color + '25');
+    }
+    inner.style.boxShadow = `0 0 20px ${node.color}15`;
+
+    if (node.type === 'center') {
+      inner.innerHTML = `
+        <div class="node-icon">${node.icon}</div>
+        <div class="node-label" style="color:${node.color}88">${node.label.replace('\n','<br>')}</div>
+        <div class="node-sub" style="color:${node.color}66">${node.sub}</div>
+      `;
+    } else {
+      inner.innerHTML = `
+        <div class="node-icon">${node.icon}</div>
+        <div class="node-label" style="color:${node.color}">${node.label.replace('\n','<br>')}</div>
+      `;
+    }
+
+    // complete dot
+    const dot = document.createElement('div');
+    dot.className = 'complete-dot';
+    dot.id = `dot-${node.id}`;
+
+    el.appendChild(inner);
+    el.appendChild(dot);
+    el.addEventListener('click', () => openNode(node.id));
+    mapRoot.appendChild(el);
+    // Staggered entrance
+    if (node.type !== 'center') {
+      const nodeIndex = NODES.filter(n=>n.type!=='center').indexOf(node);
+      el.style.opacity = '0';
+      el.style.transform = 'translate(-50%,-50%) scale(0.4)';
+      setTimeout(() => {
+        el.classList.add('entering');
+        el.style.opacity = '';
+        el.style.transform = '';
+        setTimeout(() => el.classList.remove('entering'), 700);
+      }, 200 + nodeIndex * 90);
+    }
+  });
+
+  renderLines();
+  renderSubNodes();
+}
+
+function renderLines() {
+  const svg = document.getElementById('lines');
+  svg.innerHTML = `<defs>
+    <filter id="glow-filter" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+      <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow-filter-strong" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>`;
+
+  const centerNode = NODES.find(n => n.id === 'center');
+  const cp = nodePosition(centerNode);
+
+  NODES.filter(n => n.type === 'sat').forEach(node => {
+    const np = nodePosition(node);
+    // ── S-curve cubic bezier ──────────────────────────────
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    const d    = sCurve(cp.x, cp.y, np.x, np.y, 0.28);
+    path.setAttribute('d', d);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', node.color);
+    path.classList.add('connector', 'visible');
+    path.id = `line-${node.id}`;
+    svg.appendChild(path);
+  });
+  // Draw sub-node S-curves
+  SUB_NODES.forEach(sub => {
+    const parent   = NODES.find(n => n.id === sub.parentId);
+    if (!parent) return;
+    const parentPos = nodePosition(parent);
+    const subPos    = subNodePosition(sub);
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    const d    = sCurve(parentPos.x, parentPos.y, subPos.x, subPos.y, 0.22);
+    path.setAttribute('d', d);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', parent.color);
+    path.classList.add('sub-connector', 'visible');
+    path.id = `subline-${sub.id}`;
+    svg.appendChild(path);
+  });
+}
+
+// ── S-curve bezier helper ────────────────────────────────────
+function sCurve(x1, y1, x2, y2, intensity = 0.25) {
+  const dx  = x2 - x1, dy = y2 - y1;
+  const len = Math.sqrt(dx*dx + dy*dy);
+  if (len < 1) return `M${x1},${y1} L${x2},${y2}`;
+  const px  = -dy / len, py = dx / len; // perpendicular unit vector
+  const off = len * intensity;
+  const cp1x = x1 + dx*0.33 + px*off;
+  const cp1y = y1 + dy*0.33 + py*off;
+  const cp2x = x1 + dx*0.67 - px*off;
+  const cp2y = y1 + dy*0.67 - py*off;
+  return `M${x1},${y1} C${cp1x},${cp1y} ${cp2x},${cp2y} ${x2},${y2}`;
+}
+
+// ── Render sub-nodes ─────────────────────────────────────────
+function renderSubNodes() {
+  const mapRoot = document.getElementById('map-root');
+  mapRoot.querySelectorAll('.node-sub-node').forEach(n => n.remove());
+  SUB_NODES.forEach((sub, idx) => {
+    const parent = NODES.find(n => n.id === sub.parentId);
+    if (!parent) return;
+    const pos = subNodePosition(sub);
+    const el  = document.createElement('div');
+    el.className  = 'node-sub-node';
+    el.id         = `node-${sub.id}`;
+    el.style.left = pos.x + 'px';
+    el.style.top  = pos.y + 'px';
+    el.style.setProperty('--sub-glow', parent.color + '55');
+
+    const inner = document.createElement('div');
+    inner.className = 'sub-inner';
+    inner.style.borderColor  = parent.color + '66';
+    inner.style.background   = `radial-gradient(circle at 38% 30%, ${parent.color}22, ${parent.bg || '#111'}dd)`;
+    inner.innerHTML = `
+      <div class="sub-icon">${sub.icon}</div>
+      <div class="sub-label" style="color:${parent.color}">${sub.label.replace('\n','<br>')}</div>
+    `;
+    el.appendChild(inner);
+
+    // Staggered entrance
+    el.style.opacity = '0';
+    setTimeout(() => {
+      el.style.transition = 'opacity .4s ease, transform .4s cubic-bezier(.34,1.56,.64,1)';
+      el.style.opacity = '1';
+    }, 400 + idx * 60);
+
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openSubNode(sub.id);
+    });
+    mapRoot.appendChild(el);
+  });
+}
+
+// ─── OPEN NODE ──────────────────────────────────────────────────────────────────
+function openNode(id) {
+  const node = NODES.find(n => n.id === id);
+  if (!node) return;
+
+  // Update active state
+  document.querySelectorAll('.node').forEach(n => n.classList.remove('active'));
+  document.getElementById(`node-${id}`)?.classList.add('active');
+
+  // Highlight line
+  document.querySelectorAll('.connector').forEach(l => l.classList.remove('active-line'));
+  if (id !== 'center') {
+    document.getElementById(`line-${id}`)?.classList.add('active-line');
+  }
+
+  state.activeNode = id;
+
+  // Build panel
+  const panel = document.getElementById('panel');
+  document.getElementById('panel-icon').textContent = node.icon;
+    document.getElementById('panel-title').textContent = node.label.replace('\n', ' ');
+  // Set panel accent to node color
+  const ph = document.getElementById('panel-header');
+  const nodeColor = node.color || '#2563eb';
+  ph.style.setProperty('--panel-accent', `linear-gradient(90deg, ${nodeColor}, ${nodeColor}88)`);
+  ph.style.setProperty('--panel-glow', nodeColor + '14');
+
+  const body = document.getElementById('panel-body');
+  body.innerHTML = '';
+
+  // ── Description section
+  const descSec = document.createElement('div');
+  descSec.className = 'panel-section';
+  descSec.innerHTML = `
+    <div class="section-label">What to Examine</div>
+    <p class="panel-description">${node.description}</p>
+  `;
+  body.appendChild(descSec);
+
+  // ── Classification section
+  const classSec = document.createElement('div');
+  classSec.className = 'panel-section';
+
+  const qEl = document.createElement('div');
+  qEl.className = 'mil-question';
+  qEl.style.borderLeftColor = node.color;
+  qEl.textContent = node.milQuestion;
+  classSec.appendChild(qEl);
+
+  classSec.innerHTML += `<div class="section-label">Your Assessment</div>`;
+
+  const listEl = document.createElement('div');
+  listEl.className = 'classif-list';
+  listEl.id = 'classif-list';
+
+  const saved = state.selections[id];
+  node.classifications.forEach(opt => {
+    const item = document.createElement('button');
+    item.className = 'classif-option' + (saved === opt.letter ? ' selected' : '');
+    item.style.setProperty('--accent', node.color);
+    item.innerHTML = `
+      <span class="option-letter" style="border-color:${node.color}44;color:${node.color};">${opt.letter}</span>
+      <span class="option-text">${opt.text}</span>
+    `;
+    item.addEventListener('click', () => selectOption(id, opt.letter, node.color));
+    listEl.appendChild(item);
+  });
+  classSec.appendChild(listEl);
+
+  // MIL badge
+  const badge = document.createElement('div');
+  badge.className = 'mil-badge';
+  badge.style.borderColor = node.color + '44';
+  badge.style.color = node.color;
+  badge.style.background = node.color + '11';
+  badge.innerHTML = `<span>📌</span> ${node.milBadge}`;
+  classSec.appendChild(badge);
+
+  body.appendChild(classSec);
+
+  // ── Tip section
+  if (node.tip) {
+    const tipSec = document.createElement('div');
+    tipSec.className = 'panel-section';
+    tipSec.innerHTML = `<div class="section-label">Investigator's Note</div>`;
+    const tipBox = document.createElement('div');
+    tipBox.className = 'tip-box';
+    tipBox.innerHTML = `
+      <span class="tip-icon">${node.tip.icon}</span>
+      <span class="tip-text">${node.tip.text}</span>
+    `;
+    tipSec.appendChild(tipBox);
+    body.appendChild(tipSec);
+  }
+
+  // ── Notes section
+  const noteSec = document.createElement('div');
+  noteSec.className = 'panel-section';
+  noteSec.innerHTML = `<div class="section-label">Your Notes</div>`;
+  const noteArea = document.createElement('textarea');
+  noteArea.className = 'user-note';
+  noteArea.placeholder = 'Write your observations about this lens here…';
+  noteArea.style.setProperty('--accent', node.color);
+  noteArea.value = state.notes[id] || '';
+  noteArea.addEventListener('input', () => { state.notes[id] = noteArea.value; });
+  noteSec.appendChild(noteArea);
+  body.appendChild(noteSec);
+
+  panel.classList.add('open');
+  hideHint();
+}
+
+function closePanel() {
+  document.getElementById('panel').classList.remove('open');
+  document.querySelectorAll('.node').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.connector').forEach(l => l.classList.remove('active-line'));
+  state.activeNode = null;
+}
+
+// ─── SELECTION ─────────────────────────────────────────────────────────────────
+function selectOption(nodeId, letter, color) {
+  state.selections[nodeId] = letter;
+
+  // Update UI in list
+  document.querySelectorAll('#classif-list .classif-option').forEach(el => {
+    const l = el.querySelector('.option-letter').textContent;
+    el.classList.toggle('selected', l === letter);
+  });
+
+  // Mark complete
+  markComplete(nodeId, color);
+}
+
+function markComplete(nodeId, color) {
+  if (state.completed.has(nodeId)) return;
+  state.completed.add(nodeId);
+  checkCompletion();
+
+  // Show dot
+  const dot = document.getElementById(`dot-${nodeId}`);
+  if (dot) {
+    dot.style.background = color;
+    dot.classList.add('show');
+  }
+
+  // Pulse ring
+  const nodeEl = document.getElementById(`node-${nodeId}`);
+  if (nodeEl) {
+    const ring = document.createElement('div');
+    ring.className = 'pulse-ring';
+    ring.style.borderColor = color;
+    ring.style.left = nodeEl.style.left;
+    ring.style.top = nodeEl.style.top;
+    document.getElementById('map-root').appendChild(ring);
+    setTimeout(() => ring.remove(), 1100);
+  }
+
+  updateProgress();
+}
+
+function updateProgress() {
+  const total = NODES.length;
+  const done = state.completed.size;
+  document.getElementById('progress-fill').style.width = (done / total * 100) + '%';
+  document.getElementById('progress-text').textContent = `${done} / ${total} nodes explored`;
+}
+
+// ─── HINT ───────────────────────────────────────────────────────────────────────
+let hintTimer;
+function showHint(text) {
+  const el = document.getElementById('hint');
+  el.textContent = text;
+  el.classList.add('show');
+  clearTimeout(hintTimer);
+  hintTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+function hideHint() {
+  clearTimeout(hintTimer);
+  document.getElementById('hint').classList.remove('show');
+}
+
+// ─── INTRO ──────────────────────────────────────────────────────────────────────
+function dismissIntro() {
+  centreMap();
+  spawnOrbits();
+  spawnParticles();
+  document.getElementById('intro').classList.add('hidden');
+  setTimeout(() => {
+    showHint('Click the center node to begin');
+  }, 600);
+}
+
+// ─── RESIZE ─────────────────────────────────────────────────────────────────────
+window.addEventListener('resize', () => {
+  renderNodes();
+});
+
+// ─── INIT ────────────────────────────────────────────────────────────────────────
+renderNodes();
+centreMap();
+
+// sidebar handled by shared script below
+</script>
+
+
+</div><!-- /.main -->
+<script>
+// ── Particles ──────────────────────────────────────────────────────────────────
+function spawnParticles() {
+  const container = document.getElementById('particles');
+  if (!container) return;
+  const colors = ['#2563eb','#10b981','#c084fc','#60a5fa','#fbbf24','#f87171','#34d399'];
+  for (let i = 0; i < 40; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = Math.random() * 3 + 1.5;
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    p.style.cssText = `
+      width:${size}px;height:${size}px;
+      background:${color};
+      left:${Math.random()*100}%;
+      top:${40 + Math.random()*55}%;
+      --dur:${5 + Math.random()*8}s;
+      --delay:${Math.random()*6}s;
+      --op:${0.25 + Math.random()*0.35};
+    `;
+    container.appendChild(p);
+  }
+}
+
+// ── Orbital rings ──────────────────────────────────────────────────────────────
+function spawnOrbits() {
+  const mapRoot = document.getElementById('map-root');
+  const c = getCenter();
+  const rings = [
+    { r: 290, dur: '32s', color: 'rgba(37,99,235,0.25)',  rev: false },
+    { r: 210, dur: '22s', color: 'rgba(16,185,129,0.2)',  rev: true  },
+    { r: 340, dur: '45s', color: 'rgba(167,139,250,0.15)',rev: false },
+  ];
+  rings.forEach(cfg => {
+    const ring = document.createElement('div');
+    ring.className = 'orbit-ring';
+    const d = cfg.r * 2;
+    ring.style.cssText = `
+      width:${d}px;height:${d}px;
+      left:${c.x}px;top:${c.y}px;
+      --orbit-dur:${cfg.dur};
+      --orbit-color:${cfg.color.split(',').slice(0,3).join(',').replace('rgba','rgb')+')'};
+      border-color:${cfg.color};
+      animation-direction:${cfg.rev?'reverse':'normal'};
+    `;
+    mapRoot.appendChild(ring);
+  });
+}
+
+// ── Completion check ───────────────────────────────────────────────────────────
+function checkCompletion() {
+  const satNodes = NODES.filter(n => n.type !== 'center');
+  const allDone  = satNodes.every(n => state.completed.has(n.id));
+  if (allDone && satNodes.length > 0) {
+    setTimeout(() => {
+      document.getElementById('completion-overlay').classList.add('show');
+    }, 800);
+  }
+}
+
+
+// ── Open sub-node (checklist panel) ────────────────────────────────────────────
+function openSubNode(id) {
+  const sub    = SUB_NODES.find(s => s.id === id);
+  if (!sub) return;
+  const parent = NODES.find(n => n.id === sub.parentId);
+  const color  = parent ? parent.color : '#60a5fa';
+
+  // Highlight active
+  document.querySelectorAll('.node-sub-node').forEach(el => el.classList.remove('active'));
+  const el = document.getElementById(`node-${id}`);
+  if (el) el.classList.add('active');
+
+  // Set panel accent
+  const ph = document.getElementById('panel-header');
+  ph.style.setProperty('--panel-accent', `linear-gradient(90deg, ${color}, ${color}88)`);
+  ph.style.setProperty('--panel-glow', color + '14');
+  document.getElementById('panel-icon').textContent  = sub.icon;
+  document.getElementById('panel-title').textContent = sub.label.replace('\n', ' ');
+
+  const checkedKey = `sp_check_${id}`;
+  const saved      = JSON.parse(localStorage.getItem(checkedKey) || '[]');
+
+  const checkColor = color;
+  document.getElementById('panel-body').innerHTML = `
+    <div class="panel-section">
+      <button class="sub-panel-back" onclick="openNode('${sub.parentId}')">
+        ← Back to ${parent ? parent.label.replace('\n',' ') : 'node'}
+      </button>
+      <div class="section-label">CHECKLIST</div>
+      <div class="checklist-wrap">
+        ${sub.checklist.map((step, i) => `
+          <div class="checklist-item ${saved.includes(i) ? 'checked' : ''}"
+               style="--check-color:${checkColor}"
+               onclick="toggleCheck('${id}', ${i}, this)">
+            <div class="check-box">${saved.includes(i) ? '✓' : ''}</div>
+            <div class="check-text">${step}</div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+
+  document.getElementById('panel').classList.add('open');
+  // Collapse sidebar on mobile
+  if (window.innerWidth < 900 && typeof toggleSidebar === 'function') {
+    const sb = document.getElementById('sidebar');
+    if (sb && !sb.classList.contains('collapsed')) toggleSidebar();
+  }
+}
+
+function toggleCheck(subId, idx, el) {
+  const key  = `sp_check_${subId}`;
+  const saved = JSON.parse(localStorage.getItem(key) || '[]');
+  const i     = saved.indexOf(idx);
+  if (i === -1) saved.push(idx); else saved.splice(i, 1);
+  localStorage.setItem(key, JSON.stringify(saved));
+  const checked = saved.includes(idx);
+  el.classList.toggle('checked', checked);
+  el.querySelector('.check-box').textContent = checked ? '✓' : '';
+}
+
+// ── Pan / Zoom ──────────────────────────────────────────────────────────────────
+const pz = { scale: 0.85, tx: 0, ty: 0, dragging: false, sx: 0, sy: 0, stx: 0, sty: 0 };
+
+function applyTransform(animate) {
+  const root = document.getElementById('map-root');
+  if (!root) return;
+  root.style.transition = animate ? 'transform .35s cubic-bezier(.4,0,.2,1)' : 'none';
+  root.style.transform  = `translate(${pz.tx}px, ${pz.ty}px) scale(${pz.scale})`;
+  root.style.transformOrigin = '0 0';
+  const pctEl = document.getElementById('zoom-pct');
+  if (pctEl) pctEl.textContent = Math.round(pz.scale * 100) + '%';
+}
+
+function centreMap() {
+  // Centre the map-root so the mindmap center sits in the viewport center
+  const vw   = window.innerWidth, vh = window.innerHeight;
+  const mw   = 2400, mh = 2000;
+  // Map center in screen space at scale=0.85
+  pz.scale = window.innerWidth < 900 ? 0.55 : 0.85;
+  pz.tx    = (vw - mw * pz.scale) / 2;
+  pz.ty    = (vh - mh * pz.scale) / 2;
+  applyTransform(false);
+}
+
+function adjustZoom(delta) {
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const newScale = Math.min(2, Math.max(0.3, pz.scale + delta));
+  // Zoom toward viewport center
+  const cx = vw / 2, cy = vh / 2;
+  const wx = (cx - pz.tx) / pz.scale;
+  const wy = (cy - pz.ty) / pz.scale;
+  pz.scale = newScale;
+  pz.tx    = cx - wx * pz.scale;
+  pz.ty    = cy - wy * pz.scale;
+  applyTransform(true);
+}
+
+function resetZoom() { centreMap(); applyTransform(true); }
+
+// Mouse/touch drag
+const canvas = document.getElementById('canvas');
+canvas.addEventListener('mousedown', e => {
+  if (e.target.closest('.node, .node-sub-node, #panel, .sidebar, #zoom-controls, #intro')) return;
+  pz.dragging = true; pz.sx = e.clientX; pz.sy = e.clientY;
+  pz.stx = pz.tx; pz.sty = pz.ty;
+  document.getElementById('map-root').classList.add('dragging');
+});
+window.addEventListener('mousemove', e => {
+  if (!pz.dragging) return;
+  pz.tx = pz.stx + (e.clientX - pz.sx);
+  pz.ty = pz.sty + (e.clientY - pz.sy);
+  applyTransform(false);
+});
+window.addEventListener('mouseup', () => {
+  pz.dragging = false;
+  const root = document.getElementById('map-root');
+  if (root) root.classList.remove('dragging');
+});
+// Touch drag
+canvas.addEventListener('touchstart', e => {
+  if (e.touches.length !== 1) return;
+  if (e.target.closest('.node, .node-sub-node, #panel, .sidebar')) return;
+  pz.dragging = true;
+  pz.sx = e.touches[0].clientX; pz.sy = e.touches[0].clientY;
+  pz.stx = pz.tx; pz.sty = pz.ty;
+}, { passive: true });
+canvas.addEventListener('touchmove', e => {
+  if (!pz.dragging || e.touches.length !== 1) return;
+  pz.tx = pz.stx + (e.touches[0].clientX - pz.sx);
+  pz.ty = pz.sty + (e.touches[0].clientY - pz.sy);
+  applyTransform(false);
+}, { passive: true });
+canvas.addEventListener('touchend', () => { pz.dragging = false; });
+// Scroll-wheel zoom
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const delta     = e.deltaY > 0 ? -0.1 : 0.1;
+  const newScale  = Math.min(2, Math.max(0.3, pz.scale + delta));
+  const wx = (e.clientX - pz.tx) / pz.scale;
+  const wy = (e.clientY - pz.ty) / pz.scale;
+  pz.scale = newScale;
+  pz.tx    = e.clientX - wx * pz.scale;
+  pz.ty    = e.clientY - wy * pz.scale;
+  applyTransform(false);
+}, { passive: false });
+
+// Init pan/zoom after map renders
+window.addEventListener('resize', () => { centreMap(); applyTransform(false); });
+</script>
+<script>
+// ── Sidebar ────────────────────────────────────────────────
+const sidebar   = document.getElementById('sidebar');
+const mainEl    = document.getElementById('main');
+const burgerBtn = document.getElementById('burger-btn');
+const overlay   = document.getElementById('sidebar-overlay');
+let sidebarOpen = window.innerWidth >= 900;
+
+function initSidebar() {
+  if (window.innerWidth < 900) {
+    sidebar.classList.add('collapsed'); mainEl.classList.add('expanded');
+    burgerBtn.classList.add('visible'); sidebarOpen = false;
+  } else {
+    sidebar.classList.remove('collapsed'); mainEl.classList.remove('expanded');
+    burgerBtn.classList.remove('visible'); sidebarOpen = true;
+  }
+}
+function toggleSidebar() {
+  sidebarOpen = !sidebarOpen;
+  if (sidebarOpen) {
+    sidebar.classList.remove('collapsed');
+    if (window.innerWidth >= 900) mainEl.classList.remove('expanded');
+    else overlay.classList.add('visible');
+    burgerBtn.classList.remove('visible');
+  } else {
+    sidebar.classList.add('collapsed'); mainEl.classList.add('expanded');
+    overlay.classList.remove('visible'); burgerBtn.classList.add('visible');
+  }
+}
+window.addEventListener('resize', initSidebar);
+initSidebar();
+
+// ── Age mode ───────────────────────────────────────────────
+function setAgeMode(mode) {
+  localStorage.setItem('sp_age_mode', mode);
+  document.querySelectorAll('.age-pill').forEach(el => el.classList.remove('active'));
+  const pill = document.getElementById('age-' + mode);
+  if (pill) pill.classList.add('active');
+  // propagate to page-level applyAgeMode if it exists
+  if (typeof applyAgeMode === 'function') applyAgeMode(mode);
+}
+(function restoreAgePill() {
+  const saved = localStorage.getItem('sp_age_mode') || 'adult';
+  document.querySelectorAll('.age-pill').forEach(el => el.classList.remove('active'));
+  const pill = document.getElementById('age-' + saved);
+  if (pill) pill.classList.add('active');
+  if (typeof applyAgeMode === 'function') applyAgeMode(saved);
+})();
+</script>
+<script>
+// ── Auth state → sidebar ────────────────────────────────────
+(function() {
+  const username  = localStorage.getItem('sp_username');
+  const role      = localStorage.getItem('sp_role');
+  const loginLink = document.getElementById('sidebar-login-link');
+  const adminLink = document.getElementById('sidebar-admin-link');
+  if (username && loginLink) {
+    loginLink.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+      <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+    </svg> Log out`;
+    loginLink.href = '#';
+    loginLink.style.color = 'var(--red)';
+    loginLink.onclick = async e => {
+      e.preventDefault();
+      await fetch('/auth/cookie-logout',{method:'POST',credentials:'include'}).catch(()=>{});
+      localStorage.clear(); window.location.href = 'login.html';
+    };
+  }
+  if (role === 'admin' && adminLink) adminLink.style.display = 'flex';
+})();
+</script>
+</body>
+</html>

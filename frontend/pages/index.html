@@ -1,0 +1,1870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="/env-config.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SocialProof — Evaluate</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+/* ── Variables ───────────────────────────────────────────── */
+:root {
+  --bg:        #0d0f14;
+  --surface:   #13161e;
+  --card:      #181c27;
+  --border:    #252a3a;
+  --text:      #e8eaf0;
+  --muted:     #6b7394;
+  --accent:    #4f8ef7;
+  --accent2:   #a78bfa;
+  --green:     #34d399;
+  --red:       #f87171;
+  --orange:    #fb923c;
+  --blue:      #60a5fa;
+  --yellow:    #fbbf24;
+  --sidebar-w: 256px;
+
+  --claim-bg:   rgba(96,165,250,.15);
+  --opinion-bg: rgba(251,146,60,.12);
+  --ctx-bg:     rgba(107,115,148,.12);
+  --support-bg: rgba(52,211,153,.13);
+  --contra-bg:  rgba(248,113,113,.13);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:'DM Sans',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:0;opacity:.5;
+}
+.grid-bg{
+  position:fixed;inset:0;
+  background-image:
+    linear-gradient(rgba(79,142,247,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(79,142,247,.03) 1px, transparent 1px);
+  background-size:40px 40px;
+  pointer-events:none;z-index:0;
+}
+
+/* ── SIDEBAR ─────────────────────────────────────────────── */
+.sidebar {
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: var(--sidebar-w);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  transition: transform .3s cubic-bezier(.4,0,.2,1);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.sidebar.collapsed { transform: translateX(calc(-1 * var(--sidebar-w))); }
+
+.sidebar-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.5);
+  backdrop-filter: blur(4px);
+  z-index: 190;
+  opacity: 0; pointer-events: none;
+  transition: opacity .3s;
+}
+.sidebar-overlay.visible { opacity: 1; pointer-events: all; }
+
+/* Sidebar header */
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1rem 1rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sidebar-logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: -.02em;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-decoration: none;
+}
+.sidebar-logo span {
+  font-weight: 400;
+  opacity: .55;
+  -webkit-text-fill-color: rgba(232,234,240,.35);
+}
+.sidebar-close-btn {
+  width: 30px; height: 30px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  cursor: pointer;
+  color: var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  transition: all .2s;
+  flex-shrink: 0;
+}
+.sidebar-close-btn:hover { border-color: var(--text); color: var(--text); }
+
+/* Sidebar nav */
+.sidebar-nav {
+  padding: .75rem .6rem;
+  flex: 1;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  padding: .62rem .8rem;
+  border-radius: 9px;
+  text-decoration: none;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  font-size: .78rem;
+  letter-spacing: .04em;
+  transition: all .2s;
+  margin-bottom: .1rem;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+}
+.nav-item:hover { color: var(--text); background: rgba(255,255,255,.04); }
+.nav-item.active { color: var(--accent); background: rgba(79,142,247,.1); }
+.nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+.nav-divider {
+  height: 1px;
+  background: var(--border);
+  margin: .5rem .8rem;
+}
+
+/* Sidebar section labels */
+.sidebar-section {
+  font-family: 'DM Mono', monospace;
+  font-size: .63rem;
+  color: var(--muted);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: .75rem 1rem .4rem;
+}
+
+/* Age mode pills in sidebar */
+.age-mode-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .4rem;
+  padding: .25rem .7rem .75rem;
+}
+.age-pill {
+  padding: .45rem .5rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  font-size: .68rem;
+  cursor: pointer;
+  transition: all .2s;
+  text-align: center;
+  line-height: 1.4;
+}
+.age-pill:hover { border-color: var(--muted); color: var(--text); }
+.age-pill.active { border-color: var(--accent2); color: var(--accent2); background: rgba(167,139,250,.1); }
+
+/* Sidebar footer */
+.sidebar-footer {
+  padding: .6rem .6rem 1rem;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* ── BURGER BUTTON (floating, visible when sidebar collapsed) ── */
+.burger-btn {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 300;
+  width: 38px; height: 38px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  cursor: pointer;
+  color: var(--text);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  transition: all .2s;
+  box-shadow: 0 4px 16px rgba(0,0,0,.3);
+}
+.burger-btn:hover { border-color: var(--accent); color: var(--accent); }
+.burger-btn.visible { display: flex; }
+.burger-btn svg { width: 18px; height: 18px; }
+
+/* ── MAIN CONTENT ────────────────────────────────────────── */
+.main {
+  margin-left: var(--sidebar-w);
+  transition: margin-left .3s cubic-bezier(.4,0,.2,1);
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+}
+.main.expanded { margin-left: 0; }
+
+.app {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 6rem;
+}
+
+/* ── Top bar inside main (view toggle + title) ───────────── */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 0 2rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2rem;
+  gap: 1rem;
+}
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+.topbar-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: -.01em;
+}
+.topbar-sub {
+  font-family: 'DM Mono', monospace;
+  font-size: .68rem;
+  color: var(--muted);
+  margin-top: .15rem;
+  letter-spacing: .04em;
+}
+.view-toggle {
+  display: flex;
+  gap: .3rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: .25rem;
+}
+.view-btn {
+  font-family: 'DM Mono', monospace;
+  font-size: .71rem;
+  padding: .35rem .75rem;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all .2s;
+  letter-spacing: .04em;
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+.view-btn.active { background: var(--card); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,.3); }
+.view-btn svg { width: 13px; height: 13px; }
+
+/* ── MIND MAP ────────────────────────────────────────────── */
+#view-mindmap { display: none; }
+#view-mindmap.active { display: block; }
+#view-stepbystep.hidden { display: none; }
+
+.mindmap-wrap {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  overflow: hidden;
+}
+.mindmap-hint {
+  font-family: 'DM Mono', monospace;
+  font-size: .68rem;
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: 1rem;
+  letter-spacing: .05em;
+}
+#mindmap-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+/* SVG node styles */
+.mm-node {
+  cursor: pointer;
+  transition: opacity .2s;
+}
+.mm-node:hover .mm-rect { filter: brightness(1.2); }
+.mm-node.mm-active .mm-rect { stroke: var(--accent) !important; stroke-width: 2 !important; }
+.mm-node.mm-done .mm-rect { stroke: var(--green) !important; }
+.mm-node.mm-active .mm-label { fill: #fff !important; }
+.mm-path { fill: none; stroke: var(--border, #252a3a); stroke-width: 1.5; }
+.mm-path.mm-done-path { stroke: rgba(52,211,153,.4); }
+
+/* ── Section titles ──────────────────────────────────────── */
+.section-label{
+  font-family:'DM Mono',monospace;font-size:.72rem;
+  color:var(--accent);letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:.6rem;display:flex;align-items:center;gap:.5rem;
+}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+h2{
+  font-family:'Syne',sans-serif;font-weight:700;font-size:1.5rem;
+  margin-bottom:1.5rem;letter-spacing:-.02em;
+}
+
+/* ── Cards ───────────────────────────────────────────────── */
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:1.8rem;
+  margin-bottom:1.5rem;
+}
+
+/* ── Input area ──────────────────────────────────────────── */
+.input-tabs{display:flex;gap:.5rem;margin-bottom:1rem;}
+.tab-btn{
+  font-family:'DM Mono',monospace;font-size:.75rem;
+  padding:.4rem 1rem;border-radius:8px;border:1px solid var(--border);
+  background:transparent;color:var(--muted);cursor:pointer;transition:all .2s;letter-spacing:.05em;
+}
+.tab-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+textarea{
+  width:100%;min-height:130px;resize:vertical;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:1rem;color:var(--text);
+  font-family:'DM Sans',sans-serif;font-size:.95rem;line-height:1.6;
+  transition:border-color .2s;outline:none;
+}
+textarea:focus{border-color:var(--accent);}
+textarea::placeholder{color:var(--muted);}
+
+.btn{
+  display:inline-flex;align-items:center;gap:.5rem;
+  font-family:'Syne',sans-serif;font-weight:600;font-size:.88rem;
+  padding:.7rem 1.6rem;border-radius:10px;border:none;cursor:pointer;
+  transition:all .2s;letter-spacing:.01em;text-decoration:none;
+}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:#3a78e8;transform:translateY(-1px);box-shadow:0 6px 20px rgba(79,142,247,.3);}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);}
+.btn-ghost:hover{color:var(--text);border-color:var(--muted);}
+.btn-sm{padding:.45rem 1rem;font-size:.8rem;}
+
+/* ── Step tracker ────────────────────────────────────────── */
+.steps{
+  display:flex;gap:0;margin-bottom:2.5rem;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;overflow:hidden;
+}
+.step{
+  flex:1;padding:.9rem .5rem;text-align:center;position:relative;
+  transition:background .3s;cursor:pointer;
+}
+.step.active{background:rgba(79,142,247,.12);}
+.step.done{background:rgba(52,211,153,.07);}
+.step-num{
+  font-family:'DM Mono',monospace;font-size:.65rem;color:var(--muted);
+  display:block;margin-bottom:.25rem;letter-spacing:.08em;
+}
+.step-name{font-size:.78rem;font-weight:500;color:var(--muted);}
+.step.active .step-name{color:var(--accent);}
+.step.done .step-name{color:var(--green);}
+
+.eval-step{display:none;}
+.eval-step.active{display:block;}
+.question{font-weight:600;margin-bottom:1rem;line-height:1.5;}
+.options{display:flex;flex-direction:column;gap:.6rem;margin-bottom:1rem;}
+.option-label{
+  display:flex;align-items:flex-start;gap:.6rem;
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:.75rem 1rem;cursor:pointer;transition:all .2s;font-size:.9rem;
+}
+.option-label:hover{border-color:var(--accent);}
+.option-label input{margin-top:.15rem;accent-color:var(--accent);}
+.hint{
+  font-size:.82rem;color:var(--muted);line-height:1.6;
+  background:rgba(79,142,247,.06);border-left:2px solid rgba(79,142,247,.3);
+  padding:.6rem .9rem;border-radius:0 6px 6px 0;margin-top:.5rem;
+}
+
+.score-display{
+  font-family:'Syne',sans-serif;font-size:3rem;font-weight:800;
+  text-align:center;margin:1rem 0;
+  background:linear-gradient(135deg,var(--yellow),var(--orange));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.slider-wrap input[type=range]{
+  width:100%;accent-color:var(--accent);cursor:pointer;height:6px;
+}
+.slider-labels{
+  display:flex;justify-content:space-between;
+  font-family:'DM Mono',monospace;font-size:.67rem;color:var(--muted);
+  margin-top:.4rem;
+}
+.confidence-btns{display:flex;gap:.6rem;}
+.conf-btn{
+  flex:1;padding:.6rem;border-radius:8px;border:1px solid var(--border);
+  background:transparent;color:var(--muted);cursor:pointer;
+  font-family:'DM Mono',monospace;font-size:.78rem;
+  transition:all .2s;
+}
+.conf-btn.active{background:var(--accent2);border-color:var(--accent2);color:#fff;}
+
+.step-nav{display:flex;justify-content:space-between;align-items:center;margin-top:1.5rem;}
+.skip-link{font-size:.8rem;color:var(--muted);cursor:pointer;text-decoration:underline;opacity:.7;}
+.skip-link:hover{opacity:1;}
+
+/* ── Results panel ───────────────────────────────────────── */
+.score-card{
+  display:grid;grid-template-columns:auto 1fr;gap:2rem;align-items:center;
+  background:var(--card);border:1px solid var(--border);border-radius:16px;padding:2rem;
+  margin-bottom:1.5rem;
+}
+.label-badge{
+  display:inline-block;padding:.35rem .9rem;border-radius:20px;
+  font-family:'DM Mono',monospace;font-size:.78rem;font-weight:500;
+  letter-spacing:.05em;margin-bottom:.5rem;
+}
+.badge-green{background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.3);}
+.badge-yellow{background:rgba(251,191,36,.12);color:var(--yellow);border:1px solid rgba(251,191,36,.25);}
+.badge-red{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.25);}
+.explanation{font-size:.92rem;line-height:1.65;color:var(--muted);margin-top:.5rem;}
+.explanation-source{font-family:'DM Mono',monospace;font-size:.65rem;color:var(--muted);margin-top:.4rem;letter-spacing:.06em;}
+
+.comparison{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;}
+.comp-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.2rem;text-align:center;}
+.comp-label{font-family:'DM Mono',monospace;font-size:.7rem;color:var(--muted);letter-spacing:.08em;margin-bottom:.5rem;}
+.comp-score{font-family:'Syne',sans-serif;font-size:2.2rem;font-weight:800;color:var(--text);}
+
+.annotated-text{
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:1.4rem;line-height:1.9;font-size:.93rem;margin-bottom:1.5rem;
+}
+.ann-claim{background:var(--claim-bg);border-bottom:2px solid var(--blue);padding:1px 3px;border-radius:3px;}
+.ann-opinion{background:var(--opinion-bg);border-bottom:2px solid var(--orange);padding:1px 3px;border-radius:3px;}
+.ann-context{background:var(--ctx-bg);border-bottom:2px solid var(--muted);padding:1px 3px;border-radius:3px;}
+.ann-support{background:var(--support-bg);}
+.ann-contra{background:var(--contra-bg);}
+
+.legend{display:flex;flex-wrap:wrap;gap:.6rem;margin-bottom:1rem;}
+.leg-item{display:flex;align-items:center;gap:.4rem;font-family:'DM Mono',monospace;font-size:.7rem;color:var(--muted);}
+.leg-dot{width:10px;height:10px;border-radius:50%;}
+
+.evidence-list{display:flex;flex-direction:column;gap:.8rem;}
+.evidence-item{border-radius:10px;padding:1rem 1.2rem;font-size:.88rem;line-height:1.55;border-left:3px solid;}
+.ev-support{background:var(--support-bg);border-color:var(--green);}
+.ev-contra{background:var(--contra-bg);border-color:var(--red);}
+.ev-neutral{background:rgba(107,115,148,.1);border-color:var(--muted);}
+.ev-tag{font-family:'DM Mono',monospace;font-size:.68rem;letter-spacing:.06em;display:block;margin-bottom:.3rem;opacity:.8;}
+.ev-source{font-size:.75rem;color:var(--muted);margin-top:.4rem;font-style:italic;}
+.ev-claim-ref{font-family:'DM Mono',monospace;font-size:.68rem;color:var(--muted);margin-top:.3rem;opacity:.7;}
+
+.lesson-card{
+  background:linear-gradient(135deg,rgba(79,142,247,.08),rgba(167,139,250,.06));
+  border:1px solid rgba(79,142,247,.25);border-radius:12px;
+  padding:1.2rem 1.4rem;margin-bottom:.8rem;cursor:pointer;transition:all .2s;
+}
+.lesson-card:hover{border-color:rgba(79,142,247,.5);}
+.lesson-icon{font-size:1.3rem;margin-bottom:.5rem;}
+.lesson-title{font-weight:600;font-size:.92rem;margin-bottom:.4rem;}
+.lesson-text{font-size:.85rem;color:var(--muted);line-height:1.6;}
+.lesson-link{font-family:'DM Mono',monospace;font-size:.75rem;color:var(--accent);text-decoration:none;display:inline-block;margin-top:.5rem;}
+.no-lessons{color:var(--muted);font-size:.9rem;text-align:center;padding:1.5rem;background:var(--card);border:1px solid var(--border);border-radius:10px;}
+
+.reeval-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.8rem;margin-top:2rem;}
+
+/* Loader */
+.loader{text-align:center;padding:4rem 2rem;}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 1.5rem;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loader-text{font-family:'DM Mono',monospace;font-size:.8rem;color:var(--muted);letter-spacing:.08em;transition:opacity .2s;}
+
+.progress-bar{height:3px;background:var(--border);border-radius:2px;margin-bottom:2rem;overflow:hidden;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width .4s ease;}
+
+.feedback-good{background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.25);border-radius:10px;padding:1rem 1.2rem;font-size:.88rem;color:var(--green);margin-bottom:.8rem;}
+.feedback-bad{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:10px;padding:1rem 1.2rem;font-size:.88rem;color:var(--red);margin-bottom:.8rem;}
+.feedback-warn{background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.2);border-radius:10px;padding:1rem 1.2rem;font-size:.88rem;color:var(--yellow);margin-bottom:.8rem;}
+
+.flex{display:flex;}.gap-1{gap:.5rem;}.gap-2{gap:1rem;}
+.mt-1{margin-top:.5rem;}.mt-2{margin-top:1rem;}.mt-3{margin-top:1.5rem;}
+.text-muted{color:var(--muted);font-size:.85rem;}
+
+/* Toast */
+.toast{
+  position:fixed;bottom:2rem;right:2rem;
+  background:var(--card);border:1px solid var(--border);
+  border-radius:10px;padding:.8rem 1.2rem;
+  font-family:'DM Mono',monospace;font-size:.78rem;
+  z-index:9999;opacity:0;transform:translateY(8px);
+  transition:all .3s;pointer-events:none;max-width:340px;
+}
+.toast.show{opacity:1;transform:translateY(0);}
+
+@media(max-width:900px){
+  .main { margin-left: 0 !important; }
+  .sidebar { transform: translateX(calc(-1 * var(--sidebar-w))); }
+  .sidebar.open { transform: translateX(0); }
+  .burger-btn { display: flex !important; }
+  .sidebar-overlay.visible { display: block; }
+}
+@media(max-width:600px){
+  .score-card{grid-template-columns:1fr;}
+  .comparison{grid-template-columns:1fr;}
+  .steps{flex-wrap:wrap;}
+  .topbar { flex-direction: column; align-items: flex-start; }
+}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<!-- ══ SIDEBAR ═══════════════════════════════════════════════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="index.html" class="sidebar-logo">Social<span>Proof</span></a>
+    <button class="sidebar-close-btn" onclick="toggleSidebar()" title="Close sidebar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 6L6 18M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="index.html" class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      Evaluate
+    </a>
+    <a href="lessons.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      Lessons
+    </a>
+    <a href="mindmap.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+      Mind Map
+    </a>
+    <a href="dashboard.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </a>
+    <div class="nav-divider"></div>
+    <a href="admin.html" class="nav-item" id="sidebar-admin-link" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+      Admin
+    </a>
+  </nav>
+  <div class="sidebar-section">Age Mode</div>
+  <div class="age-mode-grid">
+    <button class="age-pill" id="age-kids"  onclick="setAgeMode('kids')">🎮<br>Kids</button>
+    <button class="age-pill" id="age-teen"  onclick="setAgeMode('teen')">⚡<br>Teen</button>
+    <button class="age-pill" id="age-adult" onclick="setAgeMode('adult')">📊<br>Adult</button>
+    <button class="age-pill" id="age-older" onclick="setAgeMode('older')">📖<br>Older</button>
+  </div>
+  <div class="sidebar-footer">
+    <a href="login.html" class="nav-item" id="sidebar-login-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+        <polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>
+      </svg>
+      Login
+    </a>
+  </div>
+</aside>
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+<button class="burger-btn" id="burger-btn" onclick="toggleSidebar()" title="Open menu">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <line x1="3" y1="6" x2="21" y2="6"/>
+    <line x1="3" y1="12" x2="21" y2="12"/>
+    <line x1="3" y1="18" x2="21" y2="18"/>
+  </svg>
+</button>
+
+<!-- ══ MAIN CONTENT ══════════════════════════════════════════ -->
+<div class="main" id="main">
+<div class="app">
+
+<!-- ── Topbar ─────────────────────────────────────────────── -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div>
+      <div class="topbar-title" id="page-title">Evaluate Content</div>
+      <div class="topbar-sub" id="page-sub">CHECK · THINK · DECIDE</div>
+    </div>
+  </div>
+  <div class="view-toggle" id="view-toggle" style="display:none;">
+    <button class="view-btn active" id="btn-stepbystep" onclick="setView('stepbystep')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+        <line x1="8" y1="18" x2="21" y2="18"/>
+        <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/>
+        <line x1="3" y1="18" x2="3.01" y2="18"/>
+      </svg>
+      Step-by-Step
+    </button>
+    <button class="view-btn" id="btn-mindmap" onclick="setView('mindmap')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3"/>
+        <circle cx="4" cy="6" r="2"/><circle cx="20" cy="6" r="2"/>
+        <circle cx="4" cy="18" r="2"/><circle cx="20" cy="18" r="2"/>
+        <line x1="6" y1="7" x2="10" y2="10"/><line x1="18" y1="7" x2="14" y2="10"/>
+        <line x1="6" y1="17" x2="10" y2="14"/><line x1="18" y1="17" x2="14" y2="14"/>
+      </svg>
+      Mind Map
+    </button>
+  </div>
+</div>
+
+<!-- ── PHASE 1: Content Input ─────────────────────────── ---->
+<div id="phase-input">
+  <div class="section-label">Step 1 <span>Content Input</span></div>
+  <h2 id="h2-input">What would you like to evaluate?</h2>
+
+  <div class="card">
+    <div class="input-tabs">
+      <button class="tab-btn active" onclick="setTab(this,'text')">✍ Text</button>
+      <button class="tab-btn" onclick="setTab(this,'url')">🔗 URL</button>
+      <button class="tab-btn" onclick="setTab(this,'image')">🖼 Image</button>
+      <button class="tab-btn" onclick="setTab(this,'file')">📄 File</button>
+    </div>
+    <textarea id="content-input" placeholder="Paste the social media post, news headline, or any content you want to fact-check…"></textarea>
+
+    <div id="image-upload-area" style="display:none;">
+      <label for="image-file-input" id="image-drop-label" style="
+        display:flex;flex-direction:column;align-items:center;justify-content:center;
+        border:2px dashed var(--border);border-radius:10px;padding:2rem 1rem;
+        cursor:pointer;gap:.75rem;transition:border-color .2s,background .2s;
+        background:var(--surface);min-height:140px;
+      ">
+        <span style="font-size:2.2rem;">🖼</span>
+        <span style="font-weight:600;color:var(--text);">Click to upload an image</span>
+        <span class="text-muted" style="font-size:.85rem;">JPG, PNG, WEBP — max 10 MB</span>
+      </label>
+      <input id="image-file-input" type="file" accept="image/*" style="display:none;" onchange="handleImageUpload(this)">
+      <div id="image-preview-wrap" style="display:none;margin-top:.75rem;text-align:center;">
+        <img id="image-preview" src="" alt="preview" style="max-height:160px;max-width:100%;border-radius:8px;object-fit:contain;border:1px solid var(--border);">
+        <div id="image-filename" class="text-muted" style="font-size:.8rem;margin-top:.4rem;"></div>
+        <button class="btn" style="margin-top:.5rem;font-size:.8rem;padding:.3rem .8rem;" onclick="clearImageUpload()">✕ Remove</button>
+      </div>
+    </div>
+
+    <!-- File (PDF/DOCX) upload area -->
+    <div id="file-upload-area" style="display:none;">
+      <label for="file-file-input" id="file-drop-label" style="
+        display:flex;flex-direction:column;align-items:center;justify-content:center;
+        border:2px dashed var(--border);border-radius:10px;padding:2rem 1rem;
+        cursor:pointer;gap:.75rem;transition:border-color .2s,background .2s;
+        background:var(--surface);min-height:140px;
+      ">
+        <span style="font-size:2.2rem;">📄</span>
+        <span style="font-weight:600;color:var(--text);">Click to upload a PDF</span>
+        <span class="text-muted" style="font-size:.85rem;">PDF only — max 10 MB</span>
+      </label>
+      <input id="file-file-input" type="file" accept=".pdf,application/pdf" style="display:none;" onchange="handleFileUpload(this)">
+      <div id="file-preview-wrap" style="display:none;margin-top:.75rem;">
+        <div style="display:flex;align-items:center;gap:.75rem;padding:.75rem 1rem;background:var(--surface);border-radius:8px;border:1px solid var(--border);">
+          <span style="font-size:1.5rem;">📄</span>
+          <div style="flex:1;min-width:0;">
+            <div id="file-filename" style="font-weight:500;color:var(--text);font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+            <div id="file-filesize" class="text-muted" style="font-size:.8rem;margin-top:.1rem;"></div>
+          </div>
+          <button class="btn" style="font-size:.8rem;padding:.3rem .8rem;flex-shrink:0;" onclick="clearFileUpload()">✕ Remove</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem;">
+      <span class="text-muted" id="char-count">0 characters</span>
+      <button class="btn btn-primary" id="begin-btn" onclick="startEvaluation()">
+        Begin Evaluation →
+      </button>
+    </div>
+  </div>
+
+  <p class="text-muted" style="text-align:center;margin-top:1rem;">
+    🔒 Your input is processed anonymously unless you're logged in.
+  </p>
+</div>
+
+<!-- ── PHASE 2: User Evaluation ────────────────────────── ---->
+<div id="phase-eval" style="display:none;">
+  <div class="section-label">Step 2 <span>Your Evaluation</span></div>
+  <h2>Evaluate the content yourself first</h2>
+  <p class="text-muted" style="margin-bottom:1.5rem;">Complete these steps before seeing the system's analysis. This is how you build media literacy skills.</p>
+
+  <div class="progress-bar"><div class="progress-fill" id="eval-progress" style="width:0%"></div></div>
+
+  <!-- Mind Map View -->
+  <div id="view-mindmap">
+    <div class="mindmap-wrap">
+      <div class="mindmap-hint">Click any node to navigate · Active node is highlighted</div>
+      <svg id="mindmap-svg" viewBox="0 0 580 360" xmlns="http://www.w3.org/2000/svg" style="max-height:360px;">
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#252a3a"/>
+          </marker>
+          <filter id="glow-blue">
+            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+            <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="glow-green">
+            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+            <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+
+        <!-- Connecting paths -->
+        <!-- Claim → Source -->
+        <path class="mm-path" d="M 248 75 C 200 100 175 120 175 145" stroke="#252a3a" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+        <!-- Claim → Bias -->
+        <path class="mm-path" d="M 332 75 C 380 100 405 120 405 145" stroke="#252a3a" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+        <!-- Source → Evidence -->
+        <path class="mm-path" d="M 195 185 C 225 210 255 220 270 235" stroke="#252a3a" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+        <!-- Bias → Evidence -->
+        <path class="mm-path" d="M 385 185 C 355 210 325 220 310 235" stroke="#252a3a" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+        <!-- Evidence → Context -->
+        <path class="mm-path" d="M 290 275 L 290 300" stroke="#252a3a" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+        <!-- Context → Decision (Rating) -->
+        <path class="mm-path" d="M 290 335 L 290 355" stroke="#252a3a" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+
+        <!-- Nodes -->
+        <!-- Claim (step 0) -->
+        <g class="mm-node" id="mm-0" onclick="mmGoTo(0)" title="Claims">
+          <rect class="mm-rect" x="218" y="38" width="144" height="42" rx="10" fill="rgba(96,165,250,.12)" stroke="#252a3a" stroke-width="1.5"/>
+          <text class="mm-label" x="290" y="56" text-anchor="middle" fill="#60a5fa" font-family="'Syne',sans-serif" font-weight="700" font-size="12">CLAIM</text>
+          <text x="290" y="72" text-anchor="middle" fill="#6b7394" font-family="'DM Mono',monospace" font-size="9.5">What's being asserted?</text>
+        </g>
+
+        <!-- Source (step 1) -->
+        <g class="mm-node" id="mm-1" onclick="mmGoTo(1)" title="Source">
+          <rect class="mm-rect" x="95" y="148" width="160" height="42" rx="10" fill="rgba(52,211,153,.1)" stroke="#252a3a" stroke-width="1.5"/>
+          <text class="mm-label" x="175" y="166" text-anchor="middle" fill="#34d399" font-family="'Syne',sans-serif" font-weight="700" font-size="12">SOURCE</text>
+          <text x="175" y="182" text-anchor="middle" fill="#6b7394" font-family="'DM Mono',monospace" font-size="9.5">Who's saying this?</text>
+        </g>
+
+        <!-- Bias (step 2) -->
+        <g class="mm-node" id="mm-2" onclick="mmGoTo(2)" title="Bias">
+          <rect class="mm-rect" x="325" y="148" width="160" height="42" rx="10" fill="rgba(251,146,60,.1)" stroke="#252a3a" stroke-width="1.5"/>
+          <text class="mm-label" x="405" y="166" text-anchor="middle" fill="#fb923c" font-family="'Syne',sans-serif" font-weight="700" font-size="12">BIAS</text>
+          <text x="405" y="182" text-anchor="middle" fill="#6b7394" font-family="'DM Mono',monospace" font-size="9.5">Emotional language?</text>
+        </g>
+
+        <!-- Evidence (step 3) -->
+        <g class="mm-node" id="mm-3" onclick="mmGoTo(3)" title="Evidence">
+          <rect class="mm-rect" x="190" y="238" width="200" height="42" rx="10" fill="rgba(167,139,250,.1)" stroke="#252a3a" stroke-width="1.5"/>
+          <text class="mm-label" x="290" y="256" text-anchor="middle" fill="#a78bfa" font-family="'Syne',sans-serif" font-weight="700" font-size="12">EVIDENCE</text>
+          <text x="290" y="272" text-anchor="middle" fill="#6b7394" font-family="'DM Mono',monospace" font-size="9.5">What supports the claim?</text>
+        </g>
+
+        <!-- Context (step 3 ext) -->
+        <g class="mm-node" id="mm-ctx" style="opacity:.5;">
+          <rect class="mm-rect" x="195" y="303" width="190" height="36" rx="10" fill="rgba(107,115,148,.1)" stroke="#252a3a" stroke-width="1.5" stroke-dasharray="4,3"/>
+          <text x="290" y="323" text-anchor="middle" fill="#6b7394" font-family="'Syne',sans-serif" font-weight="600" font-size="11">CONTEXT</text>
+        </g>
+
+        <!-- Rating (step 4) -->
+        <g class="mm-node" id="mm-4" onclick="mmGoTo(4)" title="Rating">
+          <rect class="mm-rect" x="195" y="343" width="190" height="8" rx="4" fill="rgba(79,142,247,.3)" stroke="none"/>
+          <!-- just a line suggesting more below -->
+        </g>
+
+        <!-- Step labels overlay -->
+        <text x="290" y="358" text-anchor="middle" fill="#4f8ef7" font-family="'DM Mono',monospace" font-size="9" opacity=".7">↓ RATING &amp; SUBMIT</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Step-by-step tracker (shown in both views) -->
+  <div id="view-stepbystep">
+    <div class="steps">
+      <div class="step active" id="s0"><span class="step-num">01</span><span class="step-name">Claim</span></div>
+      <div class="step" id="s1"><span class="step-num">02</span><span class="step-name">Source</span></div>
+      <div class="step" id="s2"><span class="step-num">03</span><span class="step-name">Bias</span></div>
+      <div class="step" id="s3"><span class="step-num">04</span><span class="step-name">Evidence</span></div>
+      <div class="step" id="s4"><span class="step-num">05</span><span class="step-name">Purpose</span></div>
+      <div class="step" id="s5"><span class="step-num">06</span><span class="step-name">Audience</span></div>
+      <div class="step" id="s6"><span class="step-num">07</span><span class="step-name">Logic</span></div>
+      <div class="step" id="s7"><span class="step-num">08</span><span class="step-name">Corroboration</span></div>
+      <div class="step" id="s8"><span class="step-num">09</span><span class="step-name">Rating</span></div>
+    </div>
+  </div>
+
+  <!-- Step 0: Claims -->
+  <div class="card eval-step active" id="eval-0">
+    <div class="question" id="q-claim">📌 What is the <strong>main claim</strong> being made in this content?</div>
+    <textarea id="user-claim" placeholder="In your own words, what factual claim does this post make?" style="min-height:80px;"></textarea>
+    <div class="hint" id="hint-claim">💡 A claim is a statement presented as fact — something that can be verified. Opinions and feelings are not claims.</div>
+    <div class="step-nav">
+      <span class="skip-link" onclick="skipStep(0)">Skip this step</span>
+      <button class="btn btn-primary" onclick="nextStep(0)">Next →</button>
+    </div>
+  </div>
+
+  <!-- Step 1: Source -->
+  <div class="card eval-step" id="eval-1">
+    <div class="question">🔍 How would you rate the <strong>credibility of the source</strong>?</div>
+    <div class="options" id="source-options">
+      <label class="option-label"><input type="radio" name="source" value="yes"> ✅ The source seems credible (known outlet, verified account)</label>
+      <label class="option-label"><input type="radio" name="source" value="no"> ❌ The source seems unreliable or unknown</label>
+      <label class="option-label"><input type="radio" name="source" value="unsure"> 🤔 I'm not sure / no source is mentioned</label>
+    </div>
+    <div class="hint">💡 Check the domain (.gov, .edu tend to be more reliable). Look for an "About" page or search the source name + "bias" or "reliability".</div>
+    <div class="step-nav">
+      <span class="skip-link" onclick="skipStep(1)">Skip this step</span>
+      <button class="btn btn-primary" onclick="nextStep(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- Step 2: Bias -->
+  <div class="card eval-step" id="eval-2">
+    <div class="question">⚠️ Does the content use <strong>emotionally charged or biased language</strong>?</div>
+    <div class="options">
+      <label class="option-label"><input type="radio" name="bias" value="1"> Yes — I notice exaggerations, ALL CAPS, emotional words, or clickbait patterns</label>
+      <label class="option-label"><input type="radio" name="bias" value="0"> No — The language seems neutral and factual</label>
+      <label class="option-label"><input type="radio" name="bias" value="2"> Somewhat — There are minor emotional cues but mostly balanced</label>
+    </div>
+    <div class="hint">💡 Watch for: "SHOCKING", "You won't believe", excessive "!!!", absolute words like "always/never/everyone", or appeals to fear/anger.</div>
+    <div class="step-nav">
+      <span class="skip-link" onclick="skipStep(2)">Skip this step</span>
+      <button class="btn btn-primary" onclick="nextStep(2)">Next →</button>
+    </div>
+  </div>
+
+  <!-- Step 3: Evidence -->
+  <div class="card eval-step" id="eval-3">
+    <div class="question">📊 Does the content provide <strong>verifiable evidence</strong> for its claims?</div>
+    <div class="options">
+      <label class="option-label"><input type="radio" name="evidence" value="1"> Yes — It cites studies, official reports, or named sources</label>
+      <label class="option-label"><input type="radio" name="evidence" value="0"> No — It makes claims with no supporting references</label>
+      <label class="option-label"><input type="radio" name="evidence" value="2"> Partially — Some claims are supported but others are not</label>
+    </div>
+    <div class="hint">💡 Vague references like "experts say" or "studies show" without links are not verifiable evidence. Good evidence is specific and traceable.</div>
+    <div class="step-nav">
+      <span class="skip-link" onclick="skipStep(3)">Skip this step</span>
+      <button class="btn btn-primary" onclick="nextStep(3)">Next →</button>
+    </div>
+  </div>
+
+  <!-- Step 4: Purpose / Intent -->
+  <div class="card eval-step" id="eval-4">
+    <div class="question">🎯 What is the <strong>purpose or intent</strong> of this content?</div>
+    <div class="options">
+      <label class="option-label"><input type="radio" name="purpose" value="inform"> 📰 To inform — presents facts or events objectively</label>
+      <label class="option-label"><input type="radio" name="purpose" value="persuade"> 🗣 To persuade — pushes a specific viewpoint or agenda</label>
+      <label class="option-label"><input type="radio" name="purpose" value="entertain"> 🎭 To entertain — humor, satire, or engagement-driven</label>
+      <label class="option-label"><input type="radio" name="purpose" value="mislead"> ⚠️ To mislead — appears to inform but distorts the truth</label>
+      <label class="option-label"><input type="radio" name="purpose" value="unsure"> 🤔 I'm not sure</label>
+    </div>
+    <div class="hint">💡 Knowing the <em>why</em> behind content helps you evaluate it more critically. Persuasive content isn't necessarily wrong — but it should be read differently than reporting.</div>
+    <div class="step-nav">
+      <span class="skip-link" onclick="skipStep(4)">Skip this step</span>
+      <button class="btn btn-primary" onclick="nextStep(4)">Next →</button>
+    </div>
+  </div>
+
+  <!-- Step 5: Audience -->
+  <div class="card eval-step" id="eval-5">
+    <div class="question">👥 Who is the <strong>target audience</strong> of this content?</div>
+    <div class="options">
+      <label class="option-label"><input type="radio" name="audience" value="general"> 🌐 General public — broad, non-specific audience</label>
+      <label class="option-label"><input type="radio" name="audience" value="partisan"> 🏴 A specific political or ideological group</label>
+      <label class="option-label"><input type="radio" name="audience" value="vulnerable"> ⚡ A vulnerable or emotionally susceptible group</label>
+      <label class="option-label"><input type="radio" name="audience" value="professional"> 🎓 Experts or professionals in a specific field</label>
+      <label class="option-label"><input type="radio" name="audience" value="unsure"> 🤔 Hard to tell</label>
+    </div>
+    <div class="hint">💡 Misinformation is often crafted for specific audiences — appealing to their beliefs, fears, or identity. Ask yourself: why would <em>this</em> audience be targeted?</div>
+    <div class="step-nav">
+      <span class="skip-link" onclick="skipStep(5)">Skip this step</span>
+      <button class="btn btn-primary" onclick="nextStep(5)">Next →</button>
+    </div>
+  </div>
+
+  <!-- Step 6: Logic / Reasoning -->
+  <div class="card eval-step" id="eval-6">
+    <div class="question">🧠 Does the content use <strong>sound logic and reasoning</strong>?</div>
+    <div class="options">
+      <label class="option-label"><input type="radio" name="logic" value="sound"> ✅ Yes — the argument follows logically from the evidence presented</label>
+      <label class="option-label"><input type="radio" name="logic" value="flawed"> ❌ No — conclusions are exaggerated or don't follow from the facts</label>
+      <label class="option-label"><input type="radio" name="logic" value="fallacy"> ⚠️ It uses a logical fallacy — e.g. false equivalence, slippery slope, straw man</label>
+      <label class="option-label"><input type="radio" name="logic" value="unsure"> 🤔 I'm not sure</label>
+    </div>
+    <div class="hint">💡 Common fallacies: <strong>False equivalence</strong> (treating unequal things as equal), <strong>ad hominem</strong> (attacking the person not the argument), <strong>slippery slope</strong> (assuming one event leads to extreme outcomes without evidence).</div>
+    <div class="step-nav">
+      <span class="skip-link" onclick="skipStep(6)">Skip this step</span>
+      <button class="btn btn-primary" onclick="nextStep(6)">Next →</button>
+    </div>
+  </div>
+
+  <!-- Step 7: Corroboration — last critical step before rating -->
+  <div class="card eval-step" id="eval-7">
+    <div class="question">🔄 <strong>Corroboration</strong> — Do other independent sources say the same thing?</div>
+    <div style="background:rgba(79,142,247,.07);border:1px solid rgba(79,142,247,.2);border-radius:10px;padding:1rem 1.1rem;margin-bottom:1rem;">
+      <div style="font-size:.82rem;font-weight:600;color:var(--accent);margin-bottom:.5rem;">👉 This is where a lot of misinformation hides.</div>
+      <div style="font-size:.82rem;color:var(--muted);line-height:1.6;">Ask yourself: Is this story only on one site? Are opposing views being ignored? What's <em>missing</em> from this account? Legitimate news is usually reported by multiple independent outlets.</div>
+    </div>
+    <div class="options">
+      <label class="option-label"><input type="radio" name="corroboration" value="confirmed"> ✅ Confirmed — multiple independent sources report the same thing</label>
+      <label class="option-label"><input type="radio" name="corroboration" value="partial"> 🔶 Partially — some sources confirm parts of it, but details differ</label>
+      <label class="option-label"><input type="radio" name="corroboration" value="only_one"> ❌ Only one source — I can't find it reported elsewhere</label>
+      <label class="option-label"><input type="radio" name="corroboration" value="contradicted"> 🚫 Contradicted — other sources say the opposite</label>
+      <label class="option-label"><input type="radio" name="corroboration" value="unsure"> 🤔 I haven't checked other sources</label>
+    </div>
+    <div class="hint">💡 <strong>Completeness check:</strong> Are opposing views ignored? Is context stripped away? A true account should hold up when you read it alongside other reporting.</div>
+    <div class="step-nav">
+      <span class="skip-link" onclick="skipStep(7)">Skip this step</span>
+      <button class="btn btn-primary" onclick="nextStep(7)">Next →</button>
+    </div>
+  </div>
+
+  <!-- Step 8: Rating (was Step 4) -->
+  <div class="card eval-step" id="eval-8">
+    <div class="question">🎯 Based on your analysis, how <strong>credible</strong> do you think this content is?</div>
+    <div class="score-display" id="user-score-display">50</div>
+    <div class="slider-wrap">
+      <input type="range" id="user-score" min="0" max="100" value="50"
+        oninput="document.getElementById('user-score-display').textContent=this.value;updateSliderColor(this.value)">
+      <div class="slider-labels">
+        <span>0 – Misleading</span>
+        <span>50 – Uncertain</span>
+        <span>100 – Credible</span>
+      </div>
+    </div>
+    <div class="question mt-2">How <strong>confident</strong> are you in your rating?</div>
+    <div class="confidence-btns mt-1">
+      <button class="conf-btn" onclick="selectConf(this,'low')">Low</button>
+      <button class="conf-btn" onclick="selectConf(this,'medium')">Medium</button>
+      <button class="conf-btn" onclick="selectConf(this,'high')">High</button>
+    </div>
+    <div class="step-nav" style="margin-top:2rem;">
+      <button class="btn btn-ghost" onclick="prevStep(8)">← Back</button>
+      <button class="btn btn-primary" onclick="submitEvaluation()">Submit &amp; See Analysis →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── PHASE 3: Loading ────────────────────────────────── ---->
+<div id="phase-loading" style="display:none;">
+  <div class="loader">
+    <div class="spinner"></div>
+    <div class="loader-text" id="loading-text">Analyzing content…</div>
+  </div>
+</div>
+
+<!-- ── PHASE: No Claims Detected ──────────────────────── ---->
+<div id="phase-no-claims" style="display:none;">
+  <div class="section-label">No Claims Detected</div>
+  <h2>We couldn't find a specific factual claim</h2>
+  <p class="text-muted" style="margin-bottom:1.5rem;">
+    The system didn't detect a verifiable factual claim in the content.
+    If you believe there <em>is</em> a claim being made, type it below and we'll check it.
+  </p>
+  <div class="card" id="no-claims-input-card">
+    <div class="question">💬 What do you think the claim is?</div>
+    <textarea id="no-claims-claim-input" placeholder="Type the factual claim you think this content is making…" style="min-height:80px;width:100%;box-sizing:border-box;"></textarea>
+    <div class="hint">💡 A claim is a statement presented as fact that can be verified. Example: "Coffee consumption reduces heart disease risk by 20%."</div>
+    <div style="display:flex;gap:1rem;margin-top:1rem;justify-content:flex-end;">
+      <button class="btn" style="background:var(--surface);" onclick="newEval()">← Start Over</button>
+      <button class="btn btn-primary" id="validate-claim-btn" onclick="submitNoClaimsInput()">Check this claim →</button>
+    </div>
+  </div>
+  <div class="card" id="no-claims-validating" style="display:none;text-align:center;padding:2rem;">
+    <div class="spinner" style="margin:0 auto 1rem;"></div>
+    <div class="text-muted">Checking if this is a verifiable claim…</div>
+  </div>
+  <div class="card" id="no-claims-warning" style="display:none;border:1px solid var(--yellow);">
+    <div style="font-size:1.1rem;font-weight:600;margin-bottom:.5rem;">⚠️ This might not be a verifiable claim</div>
+    <div id="no-claims-warning-reason" class="text-muted" style="margin-bottom:1.25rem;line-height:1.5;"></div>
+    <div style="display:flex;gap:1rem;justify-content:flex-end;">
+      <button class="btn" style="background:var(--surface);" onclick="retryClaimInput()">← Try again</button>
+      <button class="btn btn-primary" onclick="forceSubmitUserClaim()">Verify anyway →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── PHASE 4: Results ───────────────────────────────── ---->
+<div id="phase-results" style="display:none;">
+
+  <div class="section-label">Analysis Complete</div>
+  <h2>System Analysis Results</h2>
+
+  <div class="score-card">
+    <div>
+      <div class="label-badge badge-red" id="sys-label">—</div>
+      <div class="explanation" id="sys-explanation">—</div>
+      <div class="explanation-source" id="explanation-source"></div>
+    </div>
+  </div>
+
+  <div class="section-label">Evidence Quality</div>
+  <div id="evidence-quality" style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.2rem 1.5rem;margin-bottom:1.5rem;font-size:.88rem;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;">
+      <div>
+        <div style="font-family:'DM Mono',monospace;font-size:.68rem;color:var(--muted);letter-spacing:.07em;margin-bottom:.3rem;">COVERAGE</div>
+        <div id="eq-coverage" style="font-size:1.3rem;font-weight:700;">—</div>
+      </div>
+      <div>
+        <div style="font-family:'DM Mono',monospace;font-size:.68rem;color:var(--muted);letter-spacing:.07em;margin-bottom:.3rem;">RETRIEVAL MODE</div>
+        <div id="eq-mode" style="font-size:.88rem;font-weight:500;">—</div>
+      </div>
+      <div>
+        <div style="font-family:'DM Mono',monospace;font-size:.68rem;color:var(--muted);letter-spacing:.07em;margin-bottom:.3rem;">PARTIAL VERDICT</div>
+        <div id="eq-partial" style="font-size:.88rem;font-weight:500;">—</div>
+      </div>
+    </div>
+    <div id="eq-warning" style="display:none;margin-top:.9rem;padding:.6rem .9rem;border-radius:8px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.25);color:var(--yellow);font-size:.82rem;"></div>
+  </div>
+
+  <div class="section-label mt-3">Your Evaluation</div>
+  <div class="comparison">
+    <div class="comp-card">
+      <div class="comp-label">YOUR SCORE</div>
+      <div class="comp-score" id="comp-user">—</div>
+      <div style="font-family:'DM Mono',monospace;font-size:.7rem;color:var(--muted);margin-top:.3rem;" id="comp-user-conf"></div>
+    </div>
+  </div>
+
+  <div class="section-label">Feedback on Your Evaluation</div>
+  <div id="feedback-area"></div>
+
+  <div class="section-label mt-3">Annotated Content</div>
+  <div class="legend">
+    <div class="leg-item"><div class="leg-dot" style="background:var(--blue)"></div> Claim</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--orange)"></div> Opinion</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--muted)"></div> Context</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--green)"></div> Supported</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--red)"></div> Contradicted</div>
+  </div>
+  <div class="annotated-text" id="annotated-text"></div>
+
+  <div class="section-label">Evidence Retrieved</div>
+  <div class="evidence-list" id="evidence-list"></div>
+
+  <div class="section-label mt-3">📚 Lessons For You</div>
+  <div id="lessons-area"></div>
+
+  <div class="reeval-box">
+    <div class="question">🔄 Now that you've seen the analysis — would you like to revise your rating?</div>
+    <div class="score-display" id="reeval-score-display">50</div>
+    <div class="slider-wrap">
+      <input type="range" id="reeval-score" min="0" max="100" value="50"
+        oninput="document.getElementById('reeval-score-display').textContent=this.value">
+    </div>
+    <div class="mt-2" style="display:flex;gap:1rem;flex-wrap:wrap;">
+      <button class="btn btn-primary btn-sm" onclick="submitReeval()">Submit Revised Rating</button>
+      <button class="btn btn-ghost btn-sm" onclick="newEval()">Start New Evaluation</button>
+      <a href="reviews.html" class="btn btn-ghost btn-sm" id="review-link" style="display:none;">💬 Write a Review</a>
+    </div>
+  </div>
+
+</div><!-- /phase-results -->
+
+</div><!-- /app -->
+</div><!-- /main -->
+
+<div class="toast" id="toast"></div>
+
+<!-- ══ JAVASCRIPT ════════════════════════════════════════════ -->
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// Sidebar + Layout
+// ─────────────────────────────────────────────────────────────────────────────
+const sidebar   = document.getElementById('sidebar');
+const mainEl    = document.getElementById('main');
+const burgerBtn = document.getElementById('burger-btn');
+const overlay   = document.getElementById('sidebar-overlay');
+
+let sidebarOpen = window.innerWidth >= 900;
+
+function initSidebar() {
+  if (window.innerWidth < 900) {
+    sidebar.classList.add('collapsed');
+    mainEl.classList.remove('expanded');
+    burgerBtn.classList.add('visible');
+    sidebarOpen = false;
+  } else {
+    sidebar.classList.remove('collapsed');
+    mainEl.classList.remove('expanded');
+    burgerBtn.classList.remove('visible');
+    sidebarOpen = true;
+  }
+}
+
+function toggleSidebar() {
+  sidebarOpen = !sidebarOpen;
+  if (sidebarOpen) {
+    sidebar.classList.remove('collapsed');
+    if (window.innerWidth >= 900) mainEl.classList.remove('expanded');
+    else { overlay.classList.add('visible'); }
+    burgerBtn.classList.remove('visible');
+  } else {
+    sidebar.classList.add('collapsed');
+    mainEl.classList.add('expanded');
+    overlay.classList.remove('visible');
+    burgerBtn.classList.add('visible');
+  }
+}
+
+window.addEventListener('resize', initSidebar);
+initSidebar();
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Age Mode
+// ─────────────────────────────────────────────────────────────────────────────
+const AGE_COPY = {
+  kids: {
+    pageTitle: 'Check the Story!',
+    pageSub: 'IS IT TRUE? · LET\'S FIND OUT!',
+    h2Input: 'What story do you want to check?',
+    placeholder: 'Copy or type the news story, post, or message here…',
+    beginBtn: 'Check It! →',
+    hintClaim: '💡 A claim is when someone says something happened or is true. Like "the cat ate the pizza."',
+  },
+  teen: {
+    pageTitle: 'Fact-Check This',
+    pageSub: 'REAL OR FAKE? · YOU DECIDE',
+    h2Input: 'What do you want to verify?',
+    placeholder: 'Drop the post, tweet, or article here — let\'s see if it holds up…',
+    beginBtn: 'Run the Check →',
+    hintClaim: '💡 A claim is a specific thing someone says is true — not an opinion or feeling. Think: "is this actually provable?"',
+  },
+  adult: {
+    pageTitle: 'Evaluate Content',
+    pageSub: 'CHECK · THINK · DECIDE',
+    h2Input: 'What would you like to evaluate?',
+    placeholder: 'Paste the social media post, news headline, or any content you want to fact-check…',
+    beginBtn: 'Begin Evaluation →',
+    hintClaim: '💡 A claim is a statement presented as fact — something that can be verified. Opinions and feelings are not claims.',
+  },
+  older: {
+    pageTitle: 'Check the Facts',
+    pageSub: 'IS THIS TRUE? · STEP BY STEP',
+    h2Input: 'What would you like to check?',
+    placeholder: 'Type or paste the news article, message, or post you want to check here…',
+    beginBtn: 'Start Checking →',
+    hintClaim: '💡 A claim is something stated as a fact that could be checked. For example: "This medicine cures cancer" is a claim that can be verified.',
+  },
+};
+
+let currentMode = localStorage.getItem('sp_age_mode') || 'adult';
+
+function setAgeMode(mode) {
+  currentMode = mode;
+  localStorage.setItem('sp_age_mode', mode);
+  document.querySelectorAll('.age-pill').forEach(el => el.classList.remove('active'));
+  document.getElementById('age-' + mode).classList.add('active');
+  applyAgeCopy(mode);
+}
+
+// Restore age mode pill on every page load — prevents stale 'active' from HTML default
+(function restoreAgePill() {
+  const saved = localStorage.getItem('sp_age_mode') || 'adult';
+  document.querySelectorAll('.age-pill').forEach(el => el.classList.remove('active'));
+  const pill = document.getElementById('age-' + saved);
+  if (pill) pill.classList.add('active');
+})();
+
+function applyAgeCopy(mode) {
+  const copy = AGE_COPY[mode] || AGE_COPY.adult;
+  const setTxt = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+  const setAttr = (id, attr, val) => { const el = document.getElementById(id); if (el) el[attr] = val; };
+
+  setTxt('page-title', copy.pageTitle);
+  setTxt('page-sub', copy.pageSub);
+  setTxt('h2-input', copy.h2Input);
+  setAttr('content-input', 'placeholder', copy.placeholder);
+  setTxt('begin-btn', copy.beginBtn);
+  setTxt('hint-claim', copy.hintClaim);
+
+  // Body class for larger text in older mode
+  document.body.classList.toggle('mode-kids', mode === 'kids');
+  document.body.classList.toggle('mode-older', mode === 'older');
+}
+
+// Apply saved mode on load
+document.getElementById('age-' + currentMode).classList.add('active');
+applyAgeCopy(currentMode);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// View toggle (Step-by-Step vs Mind Map)
+// ─────────────────────────────────────────────────────────────────────────────
+let currentView = 'stepbystep';
+
+function setView(view) {
+  currentView = view;
+  const mmView = document.getElementById('view-mindmap');
+  const sbView = document.getElementById('view-stepbystep');
+  const btnMM  = document.getElementById('btn-mindmap');
+  const btnSB  = document.getElementById('btn-stepbystep');
+
+  if (view === 'mindmap') {
+    mmView.classList.add('active');
+    sbView.classList.add('hidden');
+    btnMM.classList.add('active');
+    btnSB.classList.remove('active');
+    updateMindMap();
+  } else {
+    mmView.classList.remove('active');
+    sbView.classList.remove('hidden');
+    btnSB.classList.add('active');
+    btnMM.classList.remove('active');
+  }
+}
+
+function updateMindMap() {
+  // Update node states based on current step
+  const step = state.currentStep;
+  for (let i = 0; i <= 4; i++) {
+    const node = document.getElementById('mm-' + i);
+    if (!node) continue;
+    node.classList.remove('mm-active', 'mm-done');
+    if (i < step) node.classList.add('mm-done');
+    if (i === step) node.classList.add('mm-active');
+  }
+}
+
+function mmGoTo(step) {
+  goToStep(step);
+  updateMindMap();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Config
+// ─────────────────────────────────────────────────────────────────────────────
+const API_BASE = window.__BACKEND_URL__ || '';
+
+async function initSessionToken() {
+  let t = sessionStorage.getItem('sp_session');
+  if (!t) {
+    try {
+      const res = await fetch(`${API_BASE}/auth/session`);
+      const data = await res.json();
+      t = data.session_token;
+    } catch {
+      t = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+            .map(b => b.toString(16).padStart(2,'0')).join('');
+    }
+    sessionStorage.setItem('sp_session', t);
+  }
+  return t;
+}
+function getSessionToken() {
+  return sessionStorage.getItem('sp_session') || '';
+}
+
+const _SP_USER_ID  = localStorage.getItem('sp_user_id')  ? parseInt(localStorage.getItem('sp_user_id')) : null;
+const _SP_USERNAME = localStorage.getItem('sp_username') || null;
+const USER_ID      = _SP_USER_ID;
+
+function _authHeaders() {
+  return { 'Content-Type': 'application/json' };
+}
+
+initSessionToken();
+
+const state = {
+  currentStep:    0,
+  totalSteps:     9,
+  skippedSteps:   [],
+  userScore:      50,
+  confidence:     null,
+  userClaim:      '',
+  sourceRating:   null,
+  biasRating:     null,
+  evidenceRating: null,
+  purposeRating:  null,
+  audienceRating: null,
+  logicRating:    null,
+  corroboration:  null,
+  content:        '',
+  inputType:      'text',
+  imageData:      null,
+  imageFile:      null,
+  pdfData:        null,
+  pdfFile:        null,
+  evaluationId:      null,
+  userEvaluationId:  null,
+  systemResult:      null,
+  comparisonResult:  null,
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tab switcher
+// ─────────────────────────────────────────────────────────────────────────────
+function setTab(btn, type) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.inputType = type;
+
+  const ta        = document.getElementById('content-input');
+  const imgArea   = document.getElementById('image-upload-area');
+  const fileArea  = document.getElementById('file-upload-area');
+  const charWrap  = document.getElementById('char-count');
+
+  ta.style.display       = 'none';
+  imgArea.style.display  = 'none';
+  fileArea.style.display = 'none';
+
+  if (type === 'image') {
+    imgArea.style.display = 'block';
+    charWrap.textContent  = state.imageData ? '✔ Image ready' : 'No image selected';
+  } else if (type === 'file') {
+    fileArea.style.display = 'block';
+    charWrap.textContent   = state.pdfData ? '✔ File ready' : 'No file selected';
+  } else {
+    ta.style.display = '';
+    const placeholders = {
+      text: AGE_COPY[currentMode]?.placeholder || AGE_COPY.adult.placeholder,
+      url:  'Paste a URL to a news article or social media post…',
+    };
+    ta.placeholder = placeholders[type];
+    charWrap.textContent = ta.value.length + ' characters';
+  }
+}
+
+function handleImageUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) { showToast('Image is too large — please use an image under 10 MB.'); input.value = ''; return; }
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    const dataUrl   = e.target.result;
+    const base64    = dataUrl.split(',')[1];
+    state.imageData = base64;
+    state.imageFile = file.name;
+    document.getElementById('image-preview').src      = dataUrl;
+    document.getElementById('image-filename').textContent = file.name;
+    document.getElementById('image-preview-wrap').style.display = 'block';
+    document.getElementById('char-count').textContent = '✔ Image ready';
+    document.getElementById('image-drop-label').style.display   = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearImageUpload() {
+  state.imageData = null; state.imageFile = null;
+  document.getElementById('image-file-input').value           = '';
+  document.getElementById('image-preview').src                = '';
+  document.getElementById('image-preview-wrap').style.display = 'none';
+  document.getElementById('image-drop-label').style.display  = '';
+  document.getElementById('char-count').textContent           = 'No image selected';
+}
+
+function handleFileUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) { showToast('File is too large — max 10 MB.'); input.value = ''; return; }
+  if (!file.type.includes('pdf') && !file.name.endsWith('.pdf')) {
+    showToast('Only PDF files are supported.'); input.value = ''; return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    // Strip the data:...;base64, prefix — API expects raw base64
+    state.pdfData = e.target.result.split(',')[1];
+    state.pdfFile = file.name;
+    const kb = (file.size / 1024).toFixed(0);
+    document.getElementById('file-filename').textContent       = file.name;
+    document.getElementById('file-filesize').textContent       = kb + ' KB';
+    document.getElementById('file-preview-wrap').style.display = 'block';
+    document.getElementById('file-drop-label').style.display   = 'none';
+    document.getElementById('char-count').textContent          = '✔ File ready';
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearFileUpload() {
+  state.pdfData = null; state.pdfFile = null;
+  document.getElementById('file-file-input').value            = '';
+  document.getElementById('file-preview-wrap').style.display  = 'none';
+  document.getElementById('file-drop-label').style.display    = '';
+  document.getElementById('char-count').textContent           = 'No file selected';
+}
+
+document.getElementById('content-input').addEventListener('input', function () {
+  document.getElementById('char-count').textContent = this.value.length + ' characters';
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase transitions
+// ─────────────────────────────────────────────────────────────────────────────
+function show(id) {
+  ['phase-input','phase-eval','phase-loading','phase-no-claims','phase-results'].forEach(p => {
+    document.getElementById(p).style.display = (p === id) ? 'block' : 'none';
+  });
+  // Show view toggle only during eval phase
+  document.getElementById('view-toggle').style.display = (id === 'phase-eval') ? 'flex' : 'none';
+}
+
+function startEvaluation() {
+  if (state.inputType === 'image') {
+    if (!state.imageData) { showToast('Please upload an image first.'); return; }
+    state.content = '[image]';
+  } else if (state.inputType === 'file') {
+    if (!state.pdfData) { showToast('Please upload a PDF first.'); return; }
+    state.content = '[pdf]';
+  } else {
+    const content = document.getElementById('content-input').value.trim();
+    if (content.length < 20) { showToast('Please enter at least 20 characters of content.'); return; }
+    if (state.inputType === 'url') {
+      const looks_like_url = /^https?:\/\/.{5}/.test(content) || /^[\w-]+\.\w{2,}/.test(content);
+      if (!looks_like_url) { showToast('That doesn\'t look like a URL — please paste the full link (e.g. https://example.com/article).'); return; }
+    }
+    state.content = content;
+  }
+  show('phase-eval');
+  updateProgress();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Step navigation
+// ─────────────────────────────────────────────────────────────────────────────
+function nextStep(from) {
+  if (from === 0) state.userClaim       = document.getElementById('user-claim').value;
+  if (from === 1) { const r = document.querySelector('input[name="source"]:checked');       state.sourceRating       = r ? r.value : null; }
+  if (from === 2) { const r = document.querySelector('input[name="bias"]:checked');         state.biasRating         = r ? r.value : null; }
+  if (from === 3) { const r = document.querySelector('input[name="evidence"]:checked');     state.evidenceRating     = r ? r.value : null; }
+  if (from === 4) { const r = document.querySelector('input[name="purpose"]:checked');      state.purposeRating      = r ? r.value : null; }
+  if (from === 5) { const r = document.querySelector('input[name="audience"]:checked');     state.audienceRating     = r ? r.value : null; }
+  if (from === 6) { const r = document.querySelector('input[name="logic"]:checked');        state.logicRating        = r ? r.value : null; }
+  if (from === 7) { const r = document.querySelector('input[name="corroboration"]:checked'); state.corroboration     = r ? r.value : null; }
+  goToStep(from + 1);
+}
+function prevStep(from) { goToStep(from - 1); }
+function skipStep(step) {
+  if (!state.skippedSteps.includes(step)) state.skippedSteps.push(step);
+  goToStep(step + 1);
+}
+function goToStep(step) {
+  document.querySelectorAll('.eval-step').forEach((el, i) => {
+    el.classList.toggle('active', i === step);
+  });
+  document.querySelectorAll('.step').forEach((el, i) => {
+    el.classList.toggle('active', i === step);
+    el.classList.toggle('done', i < step);
+  });
+  state.currentStep = step;
+  updateProgress();
+  if (currentView === 'mindmap') updateMindMap();
+}
+function updateProgress() {
+  const pct = (state.currentStep / state.totalSteps) * 100;
+  document.getElementById('eval-progress').style.width = pct + '%';
+}
+function selectConf(btn, val) {
+  document.querySelectorAll('.conf-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.confidence = val;
+}
+function updateSliderColor(val) {
+  const el = document.getElementById('user-score-display');
+  el.style.background = val >= 60
+    ? 'linear-gradient(135deg,#34d399,#059669)'
+    : val >= 40
+    ? 'linear-gradient(135deg,#fbbf24,#f59e0b)'
+    : 'linear-gradient(135deg,#f87171,#ef4444)';
+  el.style['-webkit-background-clip'] = 'text';
+  el.style['-webkit-text-fill-color'] = 'transparent';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// submitEvaluation
+// ─────────────────────────────────────────────────────────────────────────────
+async function submitEvaluation() {
+  state.userScore = parseInt(document.getElementById('user-score').value);
+  if (!state.confidence) { showToast('Please select your confidence level.'); return; }
+
+  show('phase-loading');
+  animateLoader();
+
+  let analysisResult;
+  try {
+    const res = await fetch(`${API_BASE}/analyze`, {
+      method:  'POST',
+      credentials: 'include',
+      headers: _authHeaders(),
+      body:    JSON.stringify({
+        text:          state.inputType === 'text' ? state.content : null,
+        url:           state.inputType === 'url'  ? state.content : null,
+        image_data:    state.inputType === 'image' ? state.imageData : null,
+        pdf_data:      state.inputType === 'file'  ? state.pdfData  : null,
+        input_type:    state.inputType === 'file'  ? 'pdf' : state.inputType,
+        session_token: getSessionToken(),
+        user_id:       USER_ID,
+      })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `API error ${res.status}`);
+    }
+    analysisResult = await res.json();
+    state.evaluationId = analysisResult.evaluation_id;
+    state.systemResult  = analysisResult;
+  } catch (err) {
+    show('phase-eval');
+    showToast(`Analysis failed: ${err.message}`);
+    return;
+  }
+
+  if (analysisResult.no_claims_detected) { _showNoClaimsPhase(); return; }
+
+  let comparisonResult = null;
+  try {
+    const skippedNames = state.skippedSteps.map(s => ['claims','source','bias','evidence','purpose','audience','logic','corroboration','rating'][s]).filter(Boolean);
+    const res2 = await fetch(`${API_BASE}/user-evaluation`, {
+      method:  'POST',
+      credentials: 'include',
+      headers: _authHeaders(),
+      body:    JSON.stringify({
+        evaluation_id:     state.evaluationId,
+        user_id:           USER_ID,
+        session_token:     getSessionToken(),
+        identified_claims: state.userClaim ? [state.userClaim] : [],
+        source_credible:   state.sourceRating,
+        bias_detected:     state.biasRating === '1',
+        evidence_assessed: state.evidenceRating === '1' || state.evidenceRating === '2',
+        user_score:        state.userScore,
+        user_label:        state.userScore >= 60 ? 'Likely Credible' : state.userScore >= 40 ? 'Uncertain' : 'Likely Misleading',
+        confidence_level:  state.confidence,
+        skipped_steps:     skippedNames,
+        // v3 new step fields — stored in analysis_json for behavior_tracker
+        purpose_rating:    state.purposeRating    || null,
+        audience_rating:   state.audienceRating   || null,
+        logic_rating:      state.logicRating      || null,
+        corroboration:     state.corroboration    || null,
+      })
+    });
+    if (res2.ok) {
+      const data2 = await res2.json();
+      comparisonResult = data2.comparison;
+      state.userEvaluationId = data2.user_evaluation_id;
+      state.comparisonResult = comparisonResult;
+    }
+  } catch (err) {
+    console.warn('User evaluation save failed:', err);
+  }
+
+  renderResults(analysisResult, comparisonResult);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// No-Claims flow
+// ─────────────────────────────────────────────────────────────────────────────
+function _showNoClaimsPhase() {
+  document.getElementById('no-claims-input-card').style.display  = 'block';
+  document.getElementById('no-claims-validating').style.display  = 'none';
+  document.getElementById('no-claims-warning').style.display     = 'none';
+  document.getElementById('no-claims-claim-input').value         = '';
+  show('phase-no-claims');
+}
+
+async function submitNoClaimsInput() {
+  const claimText = document.getElementById('no-claims-claim-input').value.trim();
+  if (claimText.length < 5) { showToast('Please type what you think the claim is (at least 5 characters).'); return; }
+  document.getElementById('no-claims-input-card').style.display = 'none';
+  document.getElementById('no-claims-warning').style.display    = 'none';
+  document.getElementById('no-claims-validating').style.display = 'block';
+
+  let validationResult;
+  try {
+    const res = await fetch(`${API_BASE}/analyze/validate-claim`, {
+      method:  'POST',
+      credentials: 'include',
+      headers: _authHeaders(),
+      body:    JSON.stringify({ claim_text: claimText, evaluation_id: state.evaluationId }),
+    });
+    if (res.status === 503) { await _runUserClaimPipeline(claimText); return; }
+    if (!res.ok) throw new Error(`Validation error ${res.status}`);
+    validationResult = await res.json();
+  } catch (err) {
+    await _runUserClaimPipeline(claimText); return;
+  }
+  document.getElementById('no-claims-validating').style.display = 'none';
+  if (validationResult.is_claim) {
+    await _runUserClaimPipeline(claimText);
+  } else {
+    state._pendingUserClaim = claimText;
+    document.getElementById('no-claims-warning-reason').textContent =
+      validationResult.reason || 'The input doesn\'t appear to be a specific, verifiable factual statement.';
+    document.getElementById('no-claims-warning').style.display = 'block';
+  }
+}
+
+function retryClaimInput() {
+  document.getElementById('no-claims-warning').style.display    = 'none';
+  document.getElementById('no-claims-input-card').style.display = 'block';
+}
+
+async function forceSubmitUserClaim() {
+  const claimText = state._pendingUserClaim;
+  if (!claimText) return;
+  document.getElementById('no-claims-warning').style.display    = 'none';
+  document.getElementById('no-claims-validating').style.display = 'block';
+  await _runUserClaimPipeline(claimText);
+}
+
+async function _runUserClaimPipeline(claimText) {
+  try {
+    const res = await fetch(`${API_BASE}/analyze/user-claim`, {
+      method:  'POST',
+      credentials: 'include',
+      headers: _authHeaders(),
+      body:    JSON.stringify({ evaluation_id: state.evaluationId, claim_text: claimText, session_token: getSessionToken(), user_id: USER_ID }),
+    });
+    if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || `Pipeline error ${res.status}`); }
+    const result = await res.json();
+    const normalised = { ...state.systemResult, ...result, no_claims_detected: false };
+    renderResults(normalised, state.comparisonResult);
+  } catch (err) {
+    show('phase-no-claims');
+    document.getElementById('no-claims-validating').style.display = 'none';
+    document.getElementById('no-claims-input-card').style.display = 'block';
+    showToast(`Pipeline error: ${err.message}`);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Loader animation
+// ─────────────────────────────────────────────────────────────────────────────
+function animateLoader() {
+  const messages = [
+    'Detecting claims…','Analyzing source credibility…',
+    'Scanning for bias patterns…','Retrieving evidence…',
+    'Running NLI contradiction check…','Scoring credibility…','Generating explanation…',
+  ];
+  let i = 0;
+  const el = document.getElementById('loading-text');
+  const iv = setInterval(() => {
+    el.style.opacity = 0;
+    setTimeout(() => { el.textContent = messages[i++ % messages.length]; el.style.opacity = 1; }, 200);
+  }, 600);
+  setTimeout(() => clearInterval(iv), 30000);
+  state._loaderInterval = iv;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Render results
+// ─────────────────────────────────────────────────────────────────────────────
+function renderResults(r, comparison) {
+  if (state._loaderInterval) clearInterval(state._loaderInterval);
+  show('phase-results');
+
+  const isInconclusive = r.is_inconclusive === true;
+  const lb = document.getElementById('sys-label');
+  lb.textContent = r.label;
+  lb.className = 'label-badge ' + (isInconclusive ? 'badge-yellow' :
+    r.label === 'Credible' ? 'badge-green' : r.label === 'Misleading' ? 'badge-red' : 'badge-yellow');
+
+  document.getElementById('sys-explanation').textContent = r.explanation;
+
+  const covPct = ((r.evidence_coverage ?? 0) * 100).toFixed(0);
+  document.getElementById('eq-coverage').textContent = covPct + '%';
+  document.getElementById('eq-coverage').style.color =
+    covPct >= 60 ? 'var(--green)' : covPct >= 30 ? 'var(--yellow)' : 'var(--red)';
+  document.getElementById('eq-mode').textContent =
+    r.live_search_used ? '🌐 Live Search (FAISS had no results)' : '📚 FAISS Corpus';
+
+  const partialEl = document.getElementById('eq-partial');
+  partialEl.textContent = r.is_partial ? 'Yes — verdict based on partial evidence' : 'No';
+  partialEl.style.color = r.is_partial ? 'var(--yellow)' : 'var(--green)';
+
+  const warnEl = document.getElementById('eq-warning');
+  if (r.suggest_secondary_retrieval || r.no_claims_detected || r.is_partial) {
+    const msgs = [];
+    if (r.no_claims_detected) msgs.push('⚠ No specific claims detected in the input.');
+    if (r.is_partial) msgs.push('⚠ Evidence coverage is 0% — no matching corpus sentences found.');
+    else if (r.suggest_secondary_retrieval) msgs.push('⚠ Evidence coverage is below 50%.');
+    warnEl.textContent  = msgs.join(' ');
+    warnEl.style.display = 'block';
+  } else { warnEl.style.display = 'none'; }
+
+  document.getElementById('explanation-source').textContent =
+    r.explanation_source === 'ollama' ? '✦ Explanation generated by local AI (Ollama)' : '✦ Rule-based explanation';
+
+  document.getElementById('comp-user').textContent = state.userScore;
+  document.getElementById('comp-user-conf').textContent = 'Confidence: ' + (state.confidence || '—');
+
+  const fb = document.getElementById('feedback-area');
+  fb.innerHTML = '';
+  if (comparison && comparison.feedback_items) {
+    comparison.feedback_items.forEach(item => {
+      const cls = item.type === 'good' ? 'feedback-good' : item.type === 'warn' ? 'feedback-warn' : 'feedback-bad';
+      fb.innerHTML += `<div class="${cls}">${item.type === 'good' ? '✓' : '✗'} ${item.text}</div>`;
+    });
+  }
+
+  const at = document.getElementById('annotated-text');
+  if (r.annotated && r.annotated.length > 0) {
+    at.innerHTML = r.annotated.map(seg => {
+      let cls = seg.type === 'claim'
+        ? 'ann-claim ' + (seg.status === 'contradict' ? 'ann-contra' : seg.status === 'support' ? 'ann-support' : '')
+        : seg.type === 'opinion' ? 'ann-opinion' : 'ann-context';
+      const statusLabel = seg.status ? ` — ${seg.status}` : '';
+      return `<span class="${cls}" title="${seg.type}${statusLabel}">${seg.text} </span>`;
+    }).join('');
+  } else {
+    at.innerHTML = `<span class="ann-context">${state.content}</span>`;
+  }
+
+  const el = document.getElementById('evidence-list');
+  if (r.evidence && r.evidence.length > 0) {
+    const allNeutral = r.evidence.every(e => e.type === 'neutral');
+    const neutralBanner = allNeutral
+      ? `<div style="padding:.6rem .9rem;margin-bottom:.75rem;border-radius:6px;background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.25);color:var(--muted);font-size:.82rem;line-height:1.55;">
+           ⚠️ <strong style="color:var(--text)">No decisive evidence found.</strong> The corpus returned related sentences but none directly support or contradict the claims.
+         </div>` : '';
+    el.innerHTML = neutralBanner + r.evidence.map(e => {
+      const cls   = e.type === 'support' ? 'ev-support' : e.type === 'contradict' ? 'ev-contra' : 'ev-neutral';
+      const tag   = e.type === 'support' ? '✅ SUPPORTING' : e.type === 'contradict' ? '❌ CONTRADICTING' : '〜 NEUTRAL';
+      const sim   = e.similarity_score ? `(similarity: ${(e.similarity_score * 100).toFixed(0)}%)` : '';
+      const claim = e.claim_text ? `<div class="ev-claim-ref">For claim: "${e.claim_text.slice(0,80)}…"</div>` : '';
+      const srcLink = e.source_url
+        ? `<a href="${e.source_url}" target="_blank" style="color:var(--accent);font-size:.73rem;">${e.source_label}</a>`
+        : e.source_label;
+      return `<div class="evidence-item ${cls}">
+        <span class="ev-tag">${tag} ${sim}</span>
+        ${e.evidence_text}
+        <div class="ev-source">Source: ${srcLink}</div>
+        ${claim}
+      </div>`;
+    }).join('');
+  } else {
+    el.innerHTML = '<p style="color:var(--muted);font-size:.9rem;padding:.5rem 0;">No relevant evidence retrieved from the corpus for the detected claims.</p>';
+  }
+
+  const la = document.getElementById('lessons-area');
+  la.innerHTML = '';
+  const triggeredLessons = comparison?.triggered_lessons || [];
+  if (triggeredLessons.length > 0) {
+    const topicIcons = { claim_detection:'🎯', source_verification:'🔍', bias_detection:'⚡', evidence_evaluation:'🧪', general:'📚' };
+    triggeredLessons.forEach(lesson => {
+      la.innerHTML += `<div class="lesson-card" onclick="markLessonRead('${lesson.key}')">
+        <div class="lesson-icon">${topicIcons[lesson.topic] || '📖'}</div>
+        <div class="lesson-title">${lesson.title}</div>
+        <div class="lesson-text">${lesson.trigger_reason || ''}</div>
+        <a href="lessons.html#${lesson.key}" class="lesson-link">Read full lesson →</a>
+      </div>`;
+    });
+  } else {
+    la.innerHTML = '<div class="no-lessons">Great job — no specific lesson gaps detected. Keep practicing with the <a href="lessons.html#quiz" style="color:var(--accent)">Quiz</a>.</div>';
+  }
+
+  document.getElementById('reeval-score').value = state.userScore;
+  document.getElementById('reeval-score-display').textContent = state.userScore;
+
+  const reviewLink = document.getElementById('review-link');
+  if (reviewLink && state.evaluationId) {
+    reviewLink.href = USER_ID ? `reviews.html?eval=${state.evaluationId}` : `login.html`;
+    reviewLink.textContent = USER_ID ? '💬 Write a Review' : '💬 Log in to Review';
+    reviewLink.style.display = '';
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Re-evaluation
+// ─────────────────────────────────────────────────────────────────────────────
+async function submitReeval() {
+  const revised = parseInt(document.getElementById('reeval-score').value);
+  if (!state.userEvaluationId) { showToast('✅ Revised rating noted. (Log in to save it.)'); return; }
+  try {
+    const res = await fetch(`${API_BASE}/re-evaluation`, {
+      method:  'POST', credentials: 'include', headers: _authHeaders(),
+      body:    JSON.stringify({ user_evaluation_id: state.userEvaluationId, revised_score: revised,
+        revised_label: revised >= 60 ? 'Likely Credible' : revised >= 40 ? 'Uncertain' : 'Likely Misleading',
+        revised_confidence: state.confidence, revision_notes: null })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const shift = data.score_shift;
+      const dir   = shift > 0 ? `↑ +${shift}` : shift < 0 ? `↓ ${shift}` : '→ unchanged';
+      showToast(`✅ Revised rating (${revised}/100) saved. Shift: ${dir} pts`);
+    } else { showToast(`✅ Revised rating (${revised}/100) recorded.`); }
+  } catch (e) { showToast(`✅ Revised rating (${revised}/100) noted.`); }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// New Evaluation
+// ─────────────────────────────────────────────────────────────────────────────
+function newEval() {
+  document.getElementById('content-input').value = '';
+  document.getElementById('char-count').textContent = '0 characters';
+  document.getElementById('user-claim').value = '';
+  document.querySelectorAll('input[type=radio]').forEach(r => r.checked = false);
+  document.getElementById('user-score').value = 50;
+  document.getElementById('user-score-display').textContent = '50';
+  state.skippedSteps = []; state.confidence = null; state.userClaim = '';
+  state.sourceRating = null; state.biasRating = null; state.evidenceRating = null;
+  state.evaluationId = null; state.userEvaluationId = null;
+  state.systemResult = null; state.comparisonResult = null;
+  state._pendingUserClaim = null; state.imageData = null; state.imageFile = null;
+  clearImageUpload();
+  document.querySelectorAll('.conf-btn').forEach(b => b.classList.remove('active'));
+  goToStep(0);
+  show('phase-input');
+}
+
+function markLessonRead(lessonKey) {
+  const read = JSON.parse(localStorage.getItem('sp_read_lessons') || '[]');
+  if (!read.includes(lessonKey)) { read.push(lessonKey); localStorage.setItem('sp_read_lessons', JSON.stringify(read)); }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+</script>
+
+<script>
+// Auth state → sidebar login link
+(function() {
+  const username = localStorage.getItem('sp_username');
+  const role     = localStorage.getItem('sp_role');
+  const loginLink = document.getElementById('sidebar-login-link');
+  const adminLink = document.getElementById('sidebar-admin-link');
+
+  if (username) {
+    if (loginLink) {
+      loginLink.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Log out`;
+      loginLink.href = '#';
+      loginLink.style.color = 'var(--red)';
+      loginLink.onclick = async function(e) {
+        e.preventDefault();
+        await fetch('/auth/cookie-logout', { method:'POST', credentials:'include' }).catch(()=>{});
+        localStorage.clear();
+        window.location.href = 'login.html';
+      };
+    }
+    if (role === 'admin' && adminLink) adminLink.style.display = 'flex';
+  }
+})();
+</script>
+
+</body>
+</html>

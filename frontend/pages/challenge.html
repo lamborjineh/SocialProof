@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="/env-config.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SocialProof — Challenge</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+/* ── Hide all scrollbars ─────────────────────────────────── */
+*{scrollbar-width:none;-ms-overflow-style:none;}
+*::-webkit-scrollbar{display:none;}
+
+/* ── Design tokens ──────────────────────────────────────────────── */
+:root{
+  --bg:#0d0f14;--surface:#13161e;--card:#181c27;--border:#252a3a;
+  --text:#e8eaf0;--muted:#6b7394;
+  --accent:#4f8ef7;--accent2:#a78bfa;
+  --green:#34d399;--red:#f87171;--orange:#fb923c;--yellow:#fbbf24;
+  --font-body:'DM Sans',sans-serif;
+  --font-mono:'DM Mono',monospace;
+  --font-head:'Syne',sans-serif;
+  --base-size:1rem;
+  --timer-duration:30;
+}
+
+/* ── Age mode overrides ─────────────────────────────────────────── */
+body.age-kids{
+  --base-size:1.1rem;--timer-duration:45;
+  --accent:#6ee7b7;--accent2:#f9a8d4;
+  --card:#1a1f30;
+}
+body.age-teen{
+  --base-size:1rem;--timer-duration:30;
+  --accent:#818cf8;--accent2:#f472b6;
+}
+body.age-older{
+  --base-size:1.15rem;--timer-duration:60;
+  --text:#f0f2f8;--muted:#8892b0;--border:#2a3050;--card:#181c28;
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:var(--font-body);font-size:var(--base-size);
+  background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;
+}
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:0;opacity:.5;
+}
+.grid-bg{
+  position:fixed;inset:0;
+  background-image:linear-gradient(rgba(79,142,247,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(79,142,247,.03) 1px,transparent 1px);
+  background-size:40px 40px;pointer-events:none;z-index:0;
+}
+.app{position:relative;z-index:1;max-width:780px;margin:0 auto;padding:2rem 1.5rem 6rem;}
+
+/* ── Header ─────────────────────────────────────────────────────── */
+header{display:flex;align-items:center;justify-content:space-between;padding:1.5rem 0 3rem;border-bottom:1px solid var(--border);margin-bottom:3rem;}
+.logo{font-family:var(--font-head);font-weight:800;font-size:1.4rem;letter-spacing:-.02em;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.logo span{font-weight:400;opacity:.6;-webkit-text-fill-color:rgba(232,234,240,.4);}
+nav a{font-family:var(--font-mono);font-size:.78rem;color:var(--muted);text-decoration:none;margin-left:1.5rem;letter-spacing:.05em;transition:color .2s;}
+nav a:hover{color:var(--text);}nav a.active{color:var(--accent);}
+
+/* ── Lobby ───────────────────────────────────────────────────────── */
+#lobby{text-align:center;padding:2rem 0;}
+.lobby-icon{font-size:3.5rem;margin-bottom:1.5rem;}
+.lobby-title{font-family:var(--font-head);font-weight:800;font-size:2.2rem;letter-spacing:-.03em;margin-bottom:.75rem;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.lobby-sub{color:var(--muted);font-size:.95rem;line-height:1.7;max-width:480px;margin:0 auto 2rem;}
+
+.mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:2rem;max-width:520px;margin-left:auto;margin-right:auto;}
+.mode-card{
+  background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:1.3rem 1rem;text-align:left;cursor:pointer;transition:all .2s;position:relative;
+}
+.mode-card:hover{border-color:rgba(79,142,247,.4);transform:translateY(-2px);}
+.mode-card.selected{border-color:var(--accent);background:rgba(79,142,247,.08);}
+.mode-card .mode-icon{font-size:1.5rem;margin-bottom:.5rem;}
+.mode-card .mode-name{font-family:var(--font-head);font-weight:700;font-size:.95rem;margin-bottom:.3rem;}
+.mode-card .mode-desc{font-size:.78rem;color:var(--muted);line-height:1.5;}
+.mode-card .mode-badge{
+  position:absolute;top:.6rem;right:.7rem;
+  font-family:var(--font-mono);font-size:.6rem;padding:.2rem .55rem;
+  border-radius:20px;text-transform:uppercase;letter-spacing:.06em;
+}
+.badge-easy{background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.2);}
+.badge-hard{background:rgba(248,113,113,.1);color:var(--red);border:1px solid rgba(248,113,113,.2);}
+.badge-scenario{background:rgba(167,139,250,.1);color:var(--accent2);border:1px solid rgba(167,139,250,.2);}
+.badge-speed{background:rgba(251,191,36,.1);color:var(--yellow);border:1px solid rgba(251,191,36,.2);}
+
+.lobby-meta{display:flex;align-items:center;justify-content:center;gap:2rem;margin-bottom:2rem;flex-wrap:wrap;}
+.meta-item{text-align:center;}
+.meta-val{font-family:var(--font-head);font-weight:800;font-size:1.6rem;color:var(--accent);}
+.meta-label{font-family:var(--font-mono);font-size:.65rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-top:.2rem;}
+
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--font-head);font-weight:600;font-size:.88rem;padding:.7rem 1.6rem;border-radius:10px;border:none;cursor:pointer;transition:all .2s;text-decoration:none;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:#3a78e8;transform:translateY(-1px);}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);}
+.btn-ghost:hover{color:var(--text);}
+.btn-lg{padding:.9rem 2.2rem;font-size:1rem;}
+
+/* ── Game HUD ────────────────────────────────────────────────────── */
+#game{display:none;}
+.hud{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:2rem;flex-wrap:wrap;}
+.hud-left{display:flex;align-items:center;gap:1.5rem;}
+.hud-stat{text-align:center;}
+.hud-val{font-family:var(--font-head);font-weight:800;font-size:1.4rem;}
+.hud-val.streak{color:var(--orange);}
+.hud-val.score{color:var(--accent);}
+.hud-val.correct{color:var(--green);}
+.hud-label{font-family:var(--font-mono);font-size:.62rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;}
+.progress-wrap{flex:1;min-width:120px;}
+.progress-bar-bg{height:6px;background:var(--surface);border-radius:3px;overflow:hidden;}
+.progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:3px;transition:width .3s ease;}
+.progress-label{font-family:var(--font-mono);font-size:.65rem;color:var(--muted);margin-top:.3rem;text-align:right;}
+
+/* ── Timer ring ──────────────────────────────────────────────────── */
+.timer-wrap{display:flex;align-items:center;gap:.75rem;}
+.timer-ring{position:relative;width:56px;height:56px;}
+.timer-svg{transform:rotate(-90deg);}
+.timer-track{fill:none;stroke:var(--surface);stroke-width:4;}
+.timer-arc{fill:none;stroke:var(--accent);stroke-width:4;stroke-linecap:round;transition:stroke-dashoffset .9s linear,stroke .3s;}
+.timer-num{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);font-weight:500;font-size:1rem;
+}
+.timer-num.urgent{color:var(--red);}
+
+/* ── Question card ───────────────────────────────────────────────── */
+.question-card{
+  background:var(--card);border:1px solid var(--border);border-radius:18px;
+  padding:2rem 2rem 1.5rem;margin-bottom:1.5rem;position:relative;overflow:hidden;
+}
+.question-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));}
+.q-meta{display:flex;align-items:center;gap:.75rem;margin-bottom:1.2rem;flex-wrap:wrap;}
+.q-num{font-family:var(--font-mono);font-size:.72rem;color:var(--muted);}
+.q-topic{font-family:var(--font-mono);font-size:.68rem;padding:.2rem .65rem;border-radius:20px;background:rgba(79,142,247,.1);color:var(--accent);border:1px solid rgba(79,142,247,.2);}
+.q-diff{font-family:var(--font-mono);font-size:.68rem;padding:.2rem .65rem;border-radius:20px;}
+.diff-beginner{background:rgba(52,211,153,.08);color:var(--green);border:1px solid rgba(52,211,153,.15);}
+.diff-intermediate{background:rgba(251,191,36,.08);color:var(--yellow);border:1px solid rgba(251,191,36,.15);}
+.diff-advanced{background:rgba(248,113,113,.08);color:var(--red);border:1px solid rgba(248,113,113,.15);}
+.mil-tag{font-family:var(--font-mono);font-size:.62rem;color:var(--accent2);letter-spacing:.04em;opacity:.8;}
+
+.question-text{font-family:var(--font-head);font-weight:600;font-size:1.1rem;line-height:1.55;margin-bottom:1.75rem;}
+
+/* Age adaptations for question text */
+body.age-kids .question-text{font-size:1.15rem;line-height:1.65;}
+body.age-older .question-text{font-size:1.2rem;line-height:1.7;}
+
+.options{display:flex;flex-direction:column;gap:.65rem;}
+.option{
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:.85rem 1.1rem;cursor:pointer;transition:all .2s;
+  font-size:.9rem;text-align:left;display:flex;align-items:center;gap:.75rem;
+}
+.option:hover:not(:disabled){border-color:rgba(79,142,247,.45);background:rgba(79,142,247,.06);}
+.option:disabled{cursor:default;}
+.option.correct{border-color:rgba(52,211,153,.5);background:rgba(52,211,153,.1);color:var(--green);}
+.option.wrong{border-color:rgba(248,113,113,.4);background:rgba(248,113,113,.08);color:var(--red);}
+.option.reveal{border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.05);}
+.option-letter{
+  font-family:var(--font-mono);font-size:.72rem;width:22px;height:22px;
+  border-radius:50%;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+body.age-older .option{font-size:1rem;padding:1rem 1.2rem;}
+
+/* ── Feedback panel ──────────────────────────────────────────────── */
+.feedback{
+  margin-top:1.25rem;padding:1rem 1.2rem;border-radius:12px;
+  font-size:.86rem;line-height:1.6;display:none;
+}
+.feedback.correct{background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2);color:var(--green);}
+.feedback.wrong{background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.2);color:var(--red);}
+.feedback.timeout{background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.2);color:var(--yellow);}
+.feedback-title{font-weight:600;margin-bottom:.35rem;}
+.feedback-exp{color:var(--text);margin-top:.4rem;line-height:1.6;}
+
+.next-btn-wrap{display:flex;justify-content:flex-end;margin-top:1.5rem;}
+
+/* ── Timeout flash ───────────────────────────────────────────────── */
+@keyframes timeoutFlash{0%,100%{opacity:1}50%{opacity:.4}}
+.timeout-flash .question-card{animation:timeoutFlash .4s ease 2;}
+
+/* ── Round summary ───────────────────────────────────────────────── */
+#summary{display:none;text-align:center;padding:2rem 0;}
+.summary-icon{font-size:3rem;margin-bottom:1rem;}
+.summary-title{font-family:var(--font-head);font-weight:800;font-size:1.8rem;margin-bottom:.5rem;}
+.summary-sub{color:var(--muted);margin-bottom:2rem;line-height:1.6;}
+.summary-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;max-width:420px;margin:0 auto 2rem;}
+.sum-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.2rem .8rem;}
+.sum-val{font-family:var(--font-head);font-weight:800;font-size:1.8rem;}
+.sum-val.green{color:var(--green);}
+.sum-val.orange{color:var(--orange);}
+.sum-val.blue{color:var(--accent);}
+.sum-label{font-family:var(--font-mono);font-size:.62rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-top:.3rem;}
+.results-list{text-align:left;max-width:560px;margin:0 auto 2rem;display:flex;flex-direction:column;gap:.5rem;}
+.result-row{display:flex;align-items:flex-start;gap:.8rem;font-size:.84rem;padding:.6rem .8rem;border-radius:8px;background:var(--card);border:1px solid var(--border);}
+.result-icon{font-size:.9rem;flex-shrink:0;margin-top:.05rem;}
+.result-text{color:var(--muted);flex:1;line-height:1.5;}
+.result-text strong{color:var(--text);}
+.summary-actions{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;}
+
+/* ── MIL insight footer ──────────────────────────────────────────── */
+.mil-footer{
+  margin-top:2.5rem;text-align:left;background:var(--card);
+  border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;
+}
+.mil-footer-title{font-family:var(--font-mono);font-size:.68rem;color:var(--accent2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.75rem;}
+.mil-skills-used{display:flex;flex-wrap:wrap;gap:.5rem;}
+.mil-chip{font-family:var(--font-mono);font-size:.7rem;padding:.25rem .7rem;border-radius:20px;background:rgba(167,139,250,.08);color:var(--accent2);border:1px solid rgba(167,139,250,.2);}
+
+/* ── Age-specific copy ───────────────────────────────────────────── */
+/* Applied via JS in updateAgeCopy() */
+
+/* ── Sidebar (shared) ─── */
+:root {--sidebar-w:256px;}
+/* ── SIDEBAR ─────────────────────────────────────────────── */
+.sidebar {
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: var(--sidebar-w);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  transition: transform .3s cubic-bezier(.4,0,.2,1);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.sidebar.collapsed { transform: translateX(calc(-1 * var(--sidebar-w))); }
+
+.sidebar-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.5);
+  backdrop-filter: blur(4px);
+  z-index: 190;
+  opacity: 0; pointer-events: none;
+  transition: opacity .3s;
+}
+.sidebar-overlay.visible { opacity: 1; pointer-events: all; }
+
+/* Sidebar header */
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1rem 1rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sidebar-logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: -.02em;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-decoration: none;
+}
+.sidebar-logo span {
+  font-weight: 400;
+  opacity: .55;
+  -webkit-text-fill-color: rgba(232,234,240,.35);
+}
+.sidebar-close-btn {
+  width: 30px; height: 30px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  cursor: pointer;
+  color: var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  transition: all .2s;
+  flex-shrink: 0;
+}
+.sidebar-close-btn:hover { border-color: var(--text); color: var(--text); }
+
+/* Sidebar nav */
+.sidebar-nav {
+  padding: .75rem .6rem;
+  flex: 1;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  padding: .62rem .8rem;
+  border-radius: 9px;
+  text-decoration: none;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  font-size: .78rem;
+  letter-spacing: .04em;
+  transition: all .2s;
+  margin-bottom: .1rem;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+}
+.nav-item:hover { color: var(--text); background: rgba(255,255,255,.04); }
+.nav-item.active { color: var(--accent); background: rgba(79,142,247,.1); }
+.nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+.nav-divider {
+  height: 1px;
+  background: var(--border);
+  margin: .5rem .8rem;
+}
+
+/* Sidebar section labels */
+.sidebar-section {
+  font-family: 'DM Mono', monospace;
+  font-size: .63rem;
+  color: var(--muted);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: .75rem 1rem .4rem;
+}
+
+/* Age mode pills in sidebar */
+.age-mode-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .4rem;
+  padding: .25rem .7rem .75rem;
+}
+.age-pill {
+  padding: .45rem .5rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  font-size: .68rem;
+  cursor: pointer;
+  transition: all .2s;
+  text-align: center;
+  line-height: 1.4;
+}
+.age-pill:hover { border-color: var(--muted); color: var(--text); }
+.age-pill.active { border-color: var(--accent2); color: var(--accent2); background: rgba(167,139,250,.1); }
+
+/* Sidebar footer */
+.sidebar-footer {
+  padding: .6rem .6rem 1rem;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* ── BURGER BUTTON (floating, visible when sidebar collapsed) ── */
+.burger-btn {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 300;
+  width: 38px; height: 38px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  cursor: pointer;
+  color: var(--text);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  transition: all .2s;
+  box-shadow: 0 4px 16px rgba(0,0,0,.3);
+}
+.burger-btn:hover { border-color: var(--accent); color: var(--accent); }
+.burger-btn.visible { display: flex; }
+.burger-btn svg { width: 18px; height: 18px; }
+
+/* ── MAIN CONTENT ────────────────────────────────────────── */
+.main {
+  margin-left: var(--sidebar-w);
+  transition: margin-left .3s cubic-bezier(.4,0,.2,1);
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+}
+.main.expanded { margin-left: 0; }
+
+.app {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 6rem;
+}
+
+@media(max-width:900px){
+  .sidebar { transform: translateX(calc(-1 * var(--sidebar-w))); }
+  .sidebar.open { transform: translateX(0); }
+  .burger-btn { display: flex !important; }
+  .sidebar-overlay.visible { display: block; }
+  .main { margin-left: 0 !important; }
+}
+
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="index.html" class="sidebar-logo">Social<span>Proof</span></a>
+    <button class="sidebar-close-btn" onclick="toggleSidebar()" title="Close sidebar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 6L6 18M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="index.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      Evaluate
+    </a>
+    <a href="lessons.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      Lessons
+    </a>
+    <a href="quiz.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Quiz
+    </a>
+    <a href="mindmap.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+      Mind Map
+    </a>
+    <a href="challenge.html" class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Challenge
+    </a>
+    <a href="dashboard.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </a>
+    <div class="nav-divider"></div>
+    <a href="admin.html" class="nav-item" id="sidebar-admin-link" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+      Admin
+    </a>
+  </nav>
+  <div class="sidebar-section">Age Mode</div>
+  <div class="age-mode-grid">
+    <button class="age-pill" id="age-kids"  onclick="setAgeMode('kids')">🎮<br>Kids</button>
+    <button class="age-pill" id="age-teen"  onclick="setAgeMode('teen')">⚡<br>Teen</button>
+    <button class="age-pill" id="age-adult" onclick="setAgeMode('adult')">📊<br>Adult</button>
+    <button class="age-pill" id="age-older" onclick="setAgeMode('older')">📖<br>Older</button>
+  </div>
+  <div class="sidebar-footer">
+    <a href="login.html" class="nav-item" id="sidebar-login-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+        <polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>
+      </svg>
+      Login
+    </a>
+  </div>
+</aside>
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+<button class="burger-btn" id="burger-btn" onclick="toggleSidebar()" title="Open menu">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <line x1="3" y1="6" x2="21" y2="6"/>
+    <line x1="3" y1="12" x2="21" y2="12"/>
+    <line x1="3" y1="18" x2="21" y2="18"/>
+  </svg>
+</button>
+<div class="main" id="main">
+<div class="app">
+
+<!-- ── LOBBY ─────────────────────────────────────────────────────── -->
+<div id="lobby">
+  <div class="lobby-icon" id="lobby-icon">⚡</div>
+  <div class="lobby-title" id="lobby-title">Challenge Mode</div>
+  <p class="lobby-sub" id="lobby-sub">
+    Test your media literacy skills with timed claim scenarios.
+    Pick a mode, answer 10 questions, and see how you stack up.
+  </p>
+
+  <!-- Mode selector -->
+  <div class="mode-grid" id="mode-grid">
+    <div class="mode-card selected" data-mode="standard" onclick="selectMode(this)">
+      <div class="mode-badge badge-easy">Beginner-friendly</div>
+      <div class="mode-icon">🧭</div>
+      <div class="mode-name">Standard</div>
+      <div class="mode-desc">Mixed topics, 30 s per question. Good for building foundational skills.</div>
+    </div>
+    <div class="mode-card" data-mode="speed" onclick="selectMode(this)">
+      <div class="mode-badge badge-speed">Fast</div>
+      <div class="mode-icon">⚡</div>
+      <div class="mode-name">Speed Run</div>
+      <div class="mode-desc">20 s per question, no second chances. For practised fact-checkers.</div>
+    </div>
+    <div class="mode-card" data-mode="scenario" onclick="selectMode(this)">
+      <div class="mode-badge badge-scenario">Scenario</div>
+      <div class="mode-icon">🎭</div>
+      <div class="mode-name">Fake News Focus</div>
+      <div class="mode-desc">Questions drawn from misinformation and bias modules. Harder.</div>
+    </div>
+    <div class="mode-card" data-mode="advanced" onclick="selectMode(this)">
+      <div class="mode-badge badge-hard">Advanced</div>
+      <div class="mode-icon">🔬</div>
+      <div class="mode-name">Deep Dive</div>
+      <div class="mode-desc">Advanced-difficulty questions only. Source verification, evidence, and more.</div>
+    </div>
+  </div>
+
+  <!-- Stats row -->
+  <div class="lobby-meta" id="lobby-meta" style="display:none;">
+    <div class="meta-item">
+      <div class="meta-val" id="meta-best">—</div>
+      <div class="meta-label">Best Score</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-val" id="meta-streak">—</div>
+      <div class="meta-label">Day Streak</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-val" id="meta-played">—</div>
+      <div class="meta-label">Rounds Played</div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary btn-lg" id="start-btn" onclick="startGame()">Start Challenge →</button>
+</div>
+
+<!-- ── GAME ───────────────────────────────────────────────────────── -->
+<div id="game">
+  <!-- HUD -->
+  <div class="hud">
+    <div class="hud-left">
+      <div class="hud-stat">
+        <div class="hud-val streak" id="hud-streak">0</div>
+        <div class="hud-label">Streak</div>
+      </div>
+      <div class="hud-stat">
+        <div class="hud-val correct" id="hud-correct">0</div>
+        <div class="hud-label">Correct</div>
+      </div>
+      <div class="hud-stat">
+        <div class="hud-val score" id="hud-score">0</div>
+        <div class="hud-label">Points</div>
+      </div>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+      </div>
+      <div class="progress-label" id="progress-label">Q 1 / 10</div>
+    </div>
+
+    <div class="timer-wrap">
+      <div class="timer-ring">
+        <svg class="timer-svg" viewBox="0 0 56 56" width="56" height="56">
+          <circle class="timer-track" cx="28" cy="28" r="24"/>
+          <circle class="timer-arc" id="timer-arc" cx="28" cy="28" r="24"
+            stroke-dasharray="150.8" stroke-dashoffset="0"/>
+        </svg>
+        <div class="timer-num" id="timer-num">30</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Question card -->
+  <div class="question-card" id="question-card">
+    <div class="q-meta">
+      <span class="q-num" id="q-num">Q1</span>
+      <span class="q-topic" id="q-topic">—</span>
+      <span class="q-diff diff-beginner" id="q-diff">beginner</span>
+      <span class="mil-tag" id="q-mil"></span>
+    </div>
+    <div class="question-text" id="question-text">Loading question…</div>
+    <div class="options" id="options-wrap"></div>
+    <div class="feedback" id="feedback">
+      <div class="feedback-title" id="feedback-title"></div>
+      <div class="feedback-exp" id="feedback-exp"></div>
+    </div>
+  </div>
+
+  <div class="next-btn-wrap">
+    <button class="btn btn-primary" id="next-btn" style="display:none;" onclick="nextQuestion()">
+      Next →
+    </button>
+  </div>
+</div>
+
+<!-- ── SUMMARY ────────────────────────────────────────────────────── -->
+<div id="summary">
+  <div class="summary-icon" id="sum-icon">🎉</div>
+  <div class="summary-title" id="sum-title">Round Complete!</div>
+  <p class="summary-sub" id="sum-sub"></p>
+
+  <div class="summary-stats">
+    <div class="sum-card">
+      <div class="sum-val green" id="sum-correct">0</div>
+      <div class="sum-label">Correct</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-val orange" id="sum-streak">0</div>
+      <div class="sum-label">Best Streak</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-val blue" id="sum-score">0</div>
+      <div class="sum-label">Points</div>
+    </div>
+  </div>
+
+  <div class="results-list" id="results-list"></div>
+
+  <div class="summary-actions">
+    <button class="btn btn-primary" onclick="restartGame()">Play Again</button>
+    <a href="dashboard.html" class="btn btn-ghost">View Dashboard</a>
+    <a href="lessons.html" class="btn btn-ghost" id="lesson-link">Review Lessons</a>
+  </div>
+
+  <div class="mil-footer">
+    <div class="mil-footer-title">MIL Skills Practised This Round</div>
+    <div class="mil-skills-used" id="mil-skills-used"></div>
+  </div>
+</div>
+
+</div><!-- .app -->
+
+<script>
+const API_BASE = window.__BACKEND_URL__ || '';
+const _userId   = localStorage.getItem('sp_user_id') ? parseInt(localStorage.getItem('sp_user_id')) : null;
+const _username = localStorage.getItem('sp_username') || null;
+
+// ── Age mode ───────────────────────────────────────────────────────────────────
+const AGE_COPY = {
+  kids: {
+    lobbyIcon:  '⭐',
+    lobbyTitle: 'Fact-Check Challenge!',
+    lobbySub:   'Can you spot what\'s true and what\'s made up? Answer as many as you can! You\'ve got more time for each question. 🌟',
+    sumWin:     (c,t) => c >= t*0.8 ? 'Amazing! You\'re a fact-checker! 🏆' : 'Great try! Keep practising! 🌟',
+    sumSub:     (c,t) => `You got ${c} out of ${t} right. Every question makes you smarter!`,
+  },
+  teen: {
+    lobbyIcon:  '⚡',
+    lobbyTitle: 'Challenge Mode',
+    lobbySub:   'Real claims. Real pressure. Think fast, think sharp — your streak is on the line.',
+    sumWin:     (c,t) => c >= t*0.8 ? 'You actually smashed that. 🔥' : 'Solid effort. Level up next time.',
+    sumSub:     (c,t) => `${c}/${t} correct. ${c >= t*0.7 ? 'Keep the streak alive →' : 'Check your gaps in the Lessons hub.'}`,
+  },
+  adult: {
+    lobbyIcon:  '⚡',
+    lobbyTitle: 'Challenge Mode',
+    lobbySub:   'Test your media literacy skills with timed claim scenarios. Pick a mode, answer 10 questions, and see how you stack up.',
+    sumWin:     (c,t) => c >= t*0.8 ? 'Strong result.' : 'Room to improve.',
+    sumSub:     (c,t) => `${c} of ${t} correct. Review your misses in the Lessons hub.`,
+  },
+  older: {
+    lobbyIcon:  '✅',
+    lobbyTitle: 'Media Literacy Practice',
+    lobbySub:   'Practise spotting reliable and unreliable information. You have extra time for each question — read carefully and choose your best answer.',
+    sumWin:     (c,t) => c >= t*0.6 ? 'Well done — good work!' : 'Thank you for practising.',
+    sumSub:     (c,t) => `You answered ${c} out of ${t} correctly. You can review the lessons for any areas you found tricky.`,
+  },
+};
+
+function applyAgeMode(mode) {
+  document.body.classList.remove('age-kids','age-teen','age-adult','age-older');
+  document.body.classList.add('age-' + (mode === 'older' ? 'older' : mode));
+  const cfg = AGE_COPY[mode] || AGE_COPY.adult;
+  document.getElementById('lobby-icon').textContent  = cfg.lobbyIcon;
+  document.getElementById('lobby-title').textContent = cfg.lobbyTitle;
+  document.getElementById('lobby-sub').textContent   = cfg.lobbySub;
+  // Store globally for summary use
+  window._ageCopy = cfg;
+  // Adjust timer duration based on CSS variable reading
+  const timerMap = { kids:45, teen:30, adult:30, older:60 };
+  window._timerDuration = timerMap[mode] || 30;
+}
+
+// ── Mode config ────────────────────────────────────────────────────────────────
+const MODE_CONFIG = {
+  standard: { topic: null,              difficulty: null,          limit: 10, timerMult: 1.0 },
+  speed:    { topic: null,              difficulty: null,          limit: 10, timerMult: 0.67 },
+  scenario: { topic: 'bias_detection',  difficulty: null,          limit: 10, timerMult: 1.0 },
+  advanced: { topic: null,              difficulty: 'advanced',    limit: 10, timerMult: 1.0 },
+};
+
+let selectedMode = 'standard';
+let questions    = [];
+let qIndex       = 0;
+let answered     = false;
+let score        = 0;
+let correct      = 0;
+let streak       = 0;
+let bestStreak   = 0;
+let timerSec     = 30;
+let timerInterval = null;
+let results      = [];
+let sessionRounds = parseInt(localStorage.getItem('sp_challenge_rounds') || '0');
+
+// MIL skill tag map per topic
+const MIL_TAGS = {
+  claim_detection:    'MIL Skill: Understand',
+  source_verification: 'MIL Skill: Evaluate & Assess',
+  bias_detection:     'MIL Skill: Evaluate & Assess',
+  evidence_evaluation: 'MIL Skill: Evaluate & Assess',
+  general:            'MIL Skill: Reflect',
+};
+
+const TOPIC_NAMES = {
+  claim_detection:    'Claim Detection',
+  source_verification: 'Source Verification',
+  bias_detection:     'Bias Detection',
+  evidence_evaluation: 'Evidence Evaluation',
+  general:            'General MIL',
+};
+
+// ── Mode selection ─────────────────────────────────────────────────────────────
+function selectMode(el) {
+  document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedMode = el.dataset.mode;
+}
+
+// ── Start game ─────────────────────────────────────────────────────────────────
+async function startGame() {
+  const btn = document.getElementById('start-btn');
+  btn.disabled = true;
+  btn.textContent = 'Loading…';
+
+  const cfg   = MODE_CONFIG[selectedMode] || MODE_CONFIG.standard;
+  let url     = `${API_BASE}/quiz?limit=${cfg.limit}`;
+  if (cfg.topic)     url += `&topic=${cfg.topic}`;
+  if (cfg.difficulty) url += `&difficulty=${cfg.difficulty}`;
+
+  try {
+    const res  = await fetch(url, { credentials: 'include' });
+    const data = await res.json();
+    if (!data || !data.length) throw new Error('No questions returned');
+    questions = data;
+  } catch(e) {
+    alert('Could not load questions. Make sure the API is running.');
+    btn.disabled   = false;
+    btn.textContent = 'Start Challenge →';
+    return;
+  }
+
+  // Reset state
+  qIndex = answered = false;
+  score = correct = streak = bestStreak = 0;
+  results = [];
+  timerSec = Math.round(window._timerDuration * (MODE_CONFIG[selectedMode]?.timerMult || 1));
+
+  document.getElementById('lobby').style.display   = 'none';
+  document.getElementById('game').style.display    = 'block';
+  document.getElementById('summary').style.display = 'none';
+
+  showQuestion(0);
+}
+
+// ── Show question ──────────────────────────────────────────────────────────────
+function showQuestion(i) {
+  if (i >= questions.length) { showSummary(); return; }
+  const q  = questions[i];
+  answered = false;
+
+  // Meta
+  const totalQ = questions.length;
+  document.getElementById('q-num').textContent   = `Q${i+1}`;
+  document.getElementById('progress-label').textContent = `Q ${i+1} / ${totalQ}`;
+  document.getElementById('progress-fill').style.width  = `${(i/totalQ)*100}%`;
+
+  const topic = q.topic || 'general';
+  document.getElementById('q-topic').textContent = TOPIC_NAMES[topic] || topic;
+  document.getElementById('q-mil').textContent   = MIL_TAGS[topic] || '';
+
+  const diff = q.difficulty || 'beginner';
+  const diffEl = document.getElementById('q-diff');
+  diffEl.textContent = diff;
+  diffEl.className   = `q-diff diff-${diff}`;
+
+  // Question
+  document.getElementById('question-text').textContent = q.question_text;
+
+  // Options
+  const opts = document.getElementById('options-wrap');
+  const options = Array.isArray(q.options) ? q.options : JSON.parse(q.options || '[]');
+  const letters = ['A','B','C','D'];
+  opts.innerHTML = options.map((opt, idx) => `
+    <button class="option" onclick="selectAnswer(${idx},${q.correct_index},'${(q.explanation||'').replace(/'/g,"\\'")}',${q.id})"
+            data-idx="${idx}">
+      <span class="option-letter">${letters[idx]||idx}</span>
+      <span>${opt}</span>
+    </button>`).join('');
+
+  // Feedback
+  const fb = document.getElementById('feedback');
+  fb.style.display = 'none';
+  fb.className = 'feedback';
+
+  document.getElementById('next-btn').style.display = 'none';
+
+  // Timer
+  startTimer();
+}
+
+// ── Timer ──────────────────────────────────────────────────────────────────────
+function startTimer() {
+  clearInterval(timerInterval);
+  const total = timerSec;
+  let remaining = total;
+  const arc = document.getElementById('timer-arc');
+  const num = document.getElementById('timer-num');
+  const circumference = 150.8;
+
+  function tick() {
+    remaining--;
+    const pct = remaining / total;
+    arc.style.strokeDashoffset = circumference * (1 - pct);
+    num.textContent = remaining;
+    arc.style.stroke = remaining <= 5 ? 'var(--red)' : remaining <= 10 ? 'var(--orange)' : 'var(--accent)';
+    num.className = 'timer-num' + (remaining <= 5 ? ' urgent' : '');
+    if (remaining <= 0) {
+      clearInterval(timerInterval);
+      onTimeout();
+    }
+  }
+
+  // Init display
+  arc.style.strokeDashoffset = '0';
+  num.textContent = total;
+  num.className   = 'timer-num';
+  arc.style.stroke = 'var(--accent)';
+
+  timerInterval = setInterval(tick, 1000);
+}
+
+function stopTimer() { clearInterval(timerInterval); }
+
+function onTimeout() {
+  if (answered) return;
+  answered = true;
+  stopTimer();
+
+  // Reveal correct answer
+  const q = questions[qIndex];
+  const options = Array.isArray(q.options) ? q.options : JSON.parse(q.options || '[]');
+  document.querySelectorAll('.option').forEach((btn, idx) => {
+    btn.disabled = true;
+    if (idx === q.correct_index) btn.classList.add('reveal');
+  });
+
+  // Reset streak
+  streak = 0;
+  updateHUD();
+
+  showFeedback('timeout', '⏱ Time\'s up!', q.explanation || 'The correct answer has been highlighted above.');
+  results.push({ text: q.question_text, correct: false, timeout: true });
+  document.getElementById('next-btn').style.display = 'inline-flex';
+
+  // Record attempt (timed out = wrong)
+  recordAttempt(q.id, -1, false);
+}
+
+// ── Answer selection ───────────────────────────────────────────────────────────
+async function selectAnswer(selectedIdx, correctIdx, explanation, questionId) {
+  if (answered) return;
+  answered = true;
+  stopTimer();
+
+  const isCorrect = selectedIdx === correctIdx;
+
+  // Visual feedback on options
+  document.querySelectorAll('.option').forEach((btn, idx) => {
+    btn.disabled = true;
+    if (idx === correctIdx) btn.classList.add('correct');
+    else if (idx === selectedIdx && !isCorrect) btn.classList.add('wrong');
+  });
+
+  if (isCorrect) {
+    correct++;
+    streak++;
+    bestStreak = Math.max(bestStreak, streak);
+    // Bonus points for streak
+    const pts = 100 + (streak > 1 ? (streak-1)*20 : 0);
+    score += pts;
+    showFeedback('correct', '✓ Correct!', explanation || '');
+    results.push({ text: questions[qIndex].question_text, correct: true, timeout: false });
+  } else {
+    streak = 0;
+    showFeedback('wrong', '✗ Not quite.', explanation || '');
+    results.push({ text: questions[qIndex].question_text, correct: false, timeout: false });
+  }
+
+  updateHUD();
+  document.getElementById('next-btn').style.display = 'inline-flex';
+  recordAttempt(questionId, selectedIdx, isCorrect);
+}
+
+function showFeedback(type, title, exp) {
+  const fb = document.getElementById('feedback');
+  fb.className   = `feedback ${type}`;
+  fb.style.display = 'block';
+  document.getElementById('feedback-title').textContent = title;
+  document.getElementById('feedback-exp').textContent   = exp;
+}
+
+function updateHUD() {
+  document.getElementById('hud-streak').textContent  = streak;
+  document.getElementById('hud-correct').textContent = correct;
+  document.getElementById('hud-score').textContent   = score;
+}
+
+function nextQuestion() {
+  qIndex++;
+  showQuestion(qIndex);
+}
+
+// ── Record quiz attempt ────────────────────────────────────────────────────────
+async function recordAttempt(questionId, selectedIdx, isCorrect) {
+  try {
+    await fetch(`${API_BASE}/quiz/attempt`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id:        _userId,
+        question_id:    questionId,
+        selected_index: selectedIdx >= 0 ? selectedIdx : 0,
+      }),
+    });
+  } catch(e) { /* non-fatal */ }
+}
+
+// ── Summary ────────────────────────────────────────────────────────────────────
+function showSummary() {
+  stopTimer();
+  document.getElementById('game').style.display    = 'none';
+  document.getElementById('summary').style.display = 'block';
+
+  const total = questions.length;
+  const pct   = Math.round((correct/total)*100);
+  const cfg   = window._ageCopy || AGE_COPY.adult;
+
+  // Icon + title
+  const icon = pct >= 80 ? '🏆' : pct >= 60 ? '⭐' : '📚';
+  document.getElementById('sum-icon').textContent  = icon;
+  document.getElementById('sum-title').textContent = cfg.sumWin(correct, total);
+  document.getElementById('sum-sub').textContent   = cfg.sumSub(correct, total);
+
+  // Stats
+  document.getElementById('sum-correct').textContent = `${correct}/${total}`;
+  document.getElementById('sum-streak').textContent  = bestStreak;
+  document.getElementById('sum-score').textContent   = score;
+
+  // Results list
+  document.getElementById('results-list').innerHTML = results.slice(0,5).map(r => `
+    <div class="result-row">
+      <span class="result-icon">${r.correct ? '✅' : r.timeout ? '⏱' : '❌'}</span>
+      <span class="result-text">${r.text.slice(0,90)}${r.text.length>90?'…':''}</span>
+    </div>`).join('');
+
+  // MIL skills practised
+  const topicsUsed = [...new Set(questions.map(q => q.topic||'general'))];
+  document.getElementById('mil-skills-used').innerHTML = topicsUsed.map(t =>
+    `<span class="mil-chip">${MIL_TAGS[t] || 'MIL Skill'}</span>`).join('');
+
+  // Update session rounds
+  sessionRounds++;
+  localStorage.setItem('sp_challenge_rounds', sessionRounds);
+
+  // Save best score
+  const prev = parseInt(localStorage.getItem('sp_challenge_best') || '0');
+  if (score > prev) localStorage.setItem('sp_challenge_best', score);
+}
+
+function restartGame() {
+  document.getElementById('summary').style.display = 'none';
+  document.getElementById('lobby').style.display   = 'block';
+  const startBtn = document.getElementById('start-btn');
+  startBtn.disabled    = false;
+  startBtn.textContent = 'Start Challenge →';
+}
+
+// ── Lobby stats ────────────────────────────────────────────────────────────────
+function initLobbyStats() {
+  const best    = localStorage.getItem('sp_challenge_best');
+  const rounds  = localStorage.getItem('sp_challenge_rounds');
+  if (best || rounds) {
+    document.getElementById('lobby-meta').style.display = 'flex';
+    document.getElementById('meta-best').textContent    = best    ? best   : '—';
+    document.getElementById('meta-played').textContent  = rounds  ? rounds : '—';
+  }
+  // Challenge streak from sessionStorage (loaded in background from dashboard)
+  const streak = localStorage.getItem('sp_challenge_streak');
+  if (streak) document.getElementById('meta-streak').textContent = streak;
+}
+
+// ── Nav: auth-aware ────────────────────────────────────────────────────────────
+(function() {
+  const username  = localStorage.getItem('sp_username');
+  const role      = localStorage.getItem('sp_role');
+  const loginLink = document.getElementById('nav-login-link');
+  if (!loginLink) return;
+  if (username) {
+    loginLink.style.display = 'none';
+    const logoutBtn = document.createElement('a');
+    logoutBtn.href = '#'; logoutBtn.textContent = 'Log out';
+    logoutBtn.style.cssText = 'margin-left:1.5rem;color:var(--red);font-family:\'DM Mono\',monospace;font-size:.78rem;letter-spacing:.05em;text-decoration:none;';
+    logoutBtn.onclick = async e => {
+      e.preventDefault();
+      await fetch('/auth/cookie-logout', { method:'POST', credentials:'include' }).catch(()=>{});
+      localStorage.clear();
+      window.location.href = 'login.html';
+    };
+    loginLink.insertAdjacentElement('afterend', logoutBtn);
+  }
+})();
+
+// ── Init ────────────────────────────────────────────────────────────────────────
+const savedMode = localStorage.getItem('sp_age_mode') || 'adult';
+applyAgeMode(savedMode);
+initLobbyStats();
+</script>
+</div><!-- /.main -->
+<script>
+// ── Sidebar ────────────────────────────────────────────────
+const sidebar   = document.getElementById('sidebar');
+const mainEl    = document.getElementById('main');
+const burgerBtn = document.getElementById('burger-btn');
+const overlay   = document.getElementById('sidebar-overlay');
+let sidebarOpen = window.innerWidth >= 900;
+
+function initSidebar() {
+  if (window.innerWidth < 900) {
+    sidebar.classList.add('collapsed'); mainEl.classList.add('expanded');
+    burgerBtn.classList.add('visible'); sidebarOpen = false;
+  } else {
+    sidebar.classList.remove('collapsed'); mainEl.classList.remove('expanded');
+    burgerBtn.classList.remove('visible'); sidebarOpen = true;
+  }
+}
+function toggleSidebar() {
+  sidebarOpen = !sidebarOpen;
+  if (sidebarOpen) {
+    sidebar.classList.remove('collapsed');
+    if (window.innerWidth >= 900) mainEl.classList.remove('expanded');
+    else overlay.classList.add('visible');
+    burgerBtn.classList.remove('visible');
+  } else {
+    sidebar.classList.add('collapsed'); mainEl.classList.add('expanded');
+    overlay.classList.remove('visible'); burgerBtn.classList.add('visible');
+  }
+}
+window.addEventListener('resize', initSidebar);
+initSidebar();
+
+// ── Age mode ───────────────────────────────────────────────
+function setAgeMode(mode) {
+  localStorage.setItem('sp_age_mode', mode);
+  document.querySelectorAll('.age-pill').forEach(el => el.classList.remove('active'));
+  const pill = document.getElementById('age-' + mode);
+  if (pill) pill.classList.add('active');
+  // propagate to page-level applyAgeMode if it exists
+  if (typeof applyAgeMode === 'function') applyAgeMode(mode);
+}
+(function restoreAgePill() {
+  const saved = localStorage.getItem('sp_age_mode') || 'adult';
+  document.querySelectorAll('.age-pill').forEach(el => el.classList.remove('active'));
+  const pill = document.getElementById('age-' + saved);
+  if (pill) pill.classList.add('active');
+  if (typeof applyAgeMode === 'function') applyAgeMode(saved);
+})();
+</script>
+<script>
+// ── Auth state → sidebar ────────────────────────────────────
+(function() {
+  const username  = localStorage.getItem('sp_username');
+  const role      = localStorage.getItem('sp_role');
+  const loginLink = document.getElementById('sidebar-login-link');
+  const adminLink = document.getElementById('sidebar-admin-link');
+  if (username && loginLink) {
+    loginLink.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+      <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+    </svg> Log out`;
+    loginLink.href = '#';
+    loginLink.style.color = 'var(--red)';
+    loginLink.onclick = async e => {
+      e.preventDefault();
+      await fetch('/auth/cookie-logout',{method:'POST',credentials:'include'}).catch(()=>{});
+      localStorage.clear(); window.location.href = 'login.html';
+    };
+  }
+  if (role === 'admin' && adminLink) adminLink.style.display = 'flex';
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="/env-config.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SocialProof — Admin Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0d0f14;--surface:#13161e;--card:#181c27;--border:#252a3a;--text:#e8eaf0;--muted:#6b7394;--accent:#4f8ef7;--accent2:#a78bfa;--green:#34d399;--red:#f87171;--orange:#fb923c;--yellow:#fbbf24;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.5;}
+.grid-bg{position:fixed;inset:0;background-image:linear-gradient(rgba(79,142,247,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(79,142,247,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+.app{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:2rem 1.5rem 6rem;}
+header{display:flex;align-items:center;justify-content:space-between;padding:1.5rem 0 3rem;border-bottom:1px solid var(--border);margin-bottom:2.5rem;}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.4rem;letter-spacing:-.02em;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.logo span{font-weight:400;opacity:.6;-webkit-text-fill-color:rgba(232,234,240,.4);}
+.admin-badge{font-family:'DM Mono',monospace;font-size:.68rem;background:rgba(248,113,113,.15);color:var(--red);border:1px solid rgba(248,113,113,.25);border-radius:20px;padding:.25rem .75rem;letter-spacing:.06em;}
+nav a{font-family:'DM Mono',monospace;font-size:.78rem;color:var(--muted);text-decoration:none;margin-left:1.5rem;letter-spacing:.05em;transition:color .2s;}
+nav a:hover{color:var(--text);}nav a.active{color:var(--accent);}
+.section-label{font-family:'DM Mono',monospace;font-size:.72rem;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.8rem;display:flex;align-items:center;gap:.5rem;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+h2{font-family:'Syne',sans-serif;font-weight:700;font-size:1.4rem;margin-bottom:1.5rem;letter-spacing:-.02em;}
+
+.auth-wall{text-align:center;padding:4rem 2rem;background:var(--card);border:1px solid var(--border);border-radius:16px;}
+.auth-wall h3{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:700;margin-bottom:.8rem;}
+.auth-wall p{color:var(--muted);font-size:.9rem;line-height:1.6;margin-bottom:1.5rem;}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:'Syne',sans-serif;font-weight:600;font-size:.88rem;padding:.65rem 1.4rem;border-radius:10px;border:none;cursor:pointer;transition:all .2s;text-decoration:none;}
+.btn-primary{background:var(--accent);color:#fff;}.btn-primary:hover{background:#3a78e8;}
+
+/* Overview grid */
+.overview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;margin-bottom:2.5rem;}
+.ov-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.2rem;}
+.ov-val{font-family:'Syne',sans-serif;font-weight:800;font-size:1.9rem;margin-bottom:.3rem;}
+.ov-label{font-family:'DM Mono',monospace;font-size:.66rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;}
+.ov-sub{font-size:.77rem;color:var(--muted);margin-top:.3rem;}
+.c-blue{color:var(--accent);}.c-green{color:var(--green);}.c-orange{color:var(--orange);}.c-purple{color:var(--accent2);}.c-red{color:var(--red);}.c-yellow{color:var(--yellow);}
+
+/* Two-column layout */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:2.5rem;}
+@media(max-width:700px){.two-col{grid-template-columns:1fr;}}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.4rem;}
+.panel-title{font-family:'DM Mono',monospace;font-size:.72rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:1rem;}
+
+/* Distribution bars */
+.dist-item{display:flex;align-items:center;gap:.8rem;margin-bottom:.7rem;font-size:.86rem;}
+.dist-label{min-width:130px;color:var(--muted);}
+.dist-bar-wrap{flex:1;height:6px;background:var(--surface);border-radius:3px;overflow:hidden;}
+.dist-bar{height:100%;border-radius:3px;transition:width .5s ease;}
+.dist-count{font-family:'DM Mono',monospace;font-size:.72rem;color:var(--muted);min-width:30px;text-align:right;}
+
+/* Lessons table */
+.data-table{width:100%;border-collapse:collapse;font-size:.83rem;}
+.data-table th{font-family:'DM Mono',monospace;font-size:.63rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;text-align:left;padding:.5rem .8rem;border-bottom:1px solid var(--border);}
+.data-table td{padding:.7rem .8rem;border-bottom:1px solid rgba(37,42,58,.4);vertical-align:middle;}
+.data-table tr:hover td{background:rgba(79,142,247,.03);}
+.data-table td:first-child{max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tag{font-family:'DM Mono',monospace;font-size:.65rem;padding:.18rem .55rem;border-radius:8px;display:inline-block;}
+.tag-claim{background:rgba(96,165,250,.12);color:#60a5fa;}
+.tag-source{background:rgba(52,211,153,.1);color:var(--green);}
+.tag-bias{background:rgba(251,146,60,.1);color:var(--orange);}
+.tag-evidence{background:rgba(167,139,250,.1);color:var(--accent2);}
+.tag-general{background:rgba(107,115,148,.12);color:var(--muted);}
+.rate-bar{display:inline-block;width:60px;height:4px;background:var(--surface);border-radius:2px;vertical-align:middle;margin-left:.5rem;overflow:hidden;}
+.rate-fill{height:100%;border-radius:2px;background:var(--green);}
+
+/* Evals table */
+.score-pill{display:inline-block;font-family:'DM Mono',monospace;font-size:.65rem;padding:.15rem .55rem;border-radius:20px;}
+.pill-cred{background:rgba(52,211,153,.12);color:var(--green);border:1px solid rgba(52,211,153,.2);}
+.pill-unc{background:rgba(251,191,36,.1);color:var(--yellow);border:1px solid rgba(251,191,36,.18);}
+.pill-mis{background:rgba(248,113,113,.1);color:var(--red);border:1px solid rgba(248,113,113,.18);}
+
+/* Pagination */
+.pagination{display:flex;gap:.5rem;align-items:center;margin-top:1rem;justify-content:flex-end;}
+.page-btn{font-family:'DM Mono',monospace;font-size:.75rem;padding:.4rem .9rem;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .2s;}
+.page-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent);}
+.page-btn:disabled{opacity:.35;cursor:default;}
+.page-info{font-family:'DM Mono',monospace;font-size:.72rem;color:var(--muted);}
+
+.spinner{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;margin:1.5rem auto;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{color:var(--muted);font-size:.88rem;text-align:center;padding:1.5rem;}
+.error-msg{color:var(--red);font-size:.85rem;padding:.8rem;background:rgba(248,113,113,.08);border-radius:8px;}
+.logout-btn{font-family:'DM Mono',monospace;font-size:.75rem;color:var(--red);background:transparent;border:1px solid rgba(248,113,113,.25);border-radius:20px;padding:.3rem .9rem;cursor:pointer;transition:all .2s;margin-left:1rem;}
+.logout-btn:hover{background:rgba(248,113,113,.1);}
+.refresh-btn{font-family:'DM Mono',monospace;font-size:.72rem;color:var(--muted);background:transparent;border:1px solid var(--border);border-radius:8px;padding:.3rem .8rem;cursor:pointer;margin-left:.5rem;transition:all .2s;}
+.refresh-btn:hover{color:var(--text);}
+/* Corpus Builder */
+.cb-chip{font-family:'DM Mono',monospace;font-size:.65rem;padding:.25rem .7rem;border-radius:20px;border:1px solid var(--border);cursor:pointer;color:var(--muted);background:transparent;transition:all .15s;}
+.cb-chip.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.cb-sent{display:flex;align-items:flex-start;gap:.7rem;padding:.65rem .8rem;border-bottom:1px solid rgba(37,42,58,.5);cursor:pointer;transition:background .1s;}
+.cb-sent:last-child{border-bottom:none;}
+.cb-sent:hover{background:rgba(79,142,247,.04);}
+.cb-sent.checked{background:rgba(79,142,247,.08);}
+.cb-sent-text{font-size:.82rem;line-height:1.5;flex:1;color:var(--text);}
+.cb-badge{display:inline-block;font-family:'DM Mono',monospace;font-size:.6rem;padding:.1rem .45rem;border-radius:6px;margin-left:.4rem;vertical-align:middle;}
+.cb-stat{background:rgba(79,142,247,.15);color:var(--accent);}
+.cb-fact{background:rgba(52,211,153,.12);color:var(--green);}
+.cb-news{background:rgba(107,115,148,.12);color:var(--muted);}
+
+/* ── Sidebar (shared) ─── */
+:root {--sidebar-w:256px;}
+.sidebar {
+  position: fixed; top: 0; left: 0; bottom: 0;
+  width: var(--sidebar-w); background: var(--surface);
+  border-right: 1px solid var(--border); z-index: 200;
+  display: flex; flex-direction: column;
+  transition: transform .3s cubic-bezier(.4,0,.2,1);
+  overflow-y: auto; overflow-x: hidden;
+}
+.sidebar.collapsed { transform: translateX(calc(-1 * var(--sidebar-w))); }
+.sidebar-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); backdrop-filter: blur(4px); z-index: 190; opacity: 0; pointer-events: none; transition: opacity .3s; }
+.sidebar-overlay.visible { opacity: 1; pointer-events: all; }
+.sidebar-header { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1rem 1rem; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.sidebar-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.15rem; letter-spacing: -.02em; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-decoration: none; }
+.sidebar-logo span { font-weight: 400; opacity: .55; -webkit-text-fill-color: rgba(232,234,240,.35); }
+.sidebar-close-btn { width: 30px; height: 30px; background: transparent; border: 1px solid var(--border); border-radius: 7px; cursor: pointer; color: var(--muted); display: flex; align-items: center; justify-content: center; transition: all .2s; flex-shrink: 0; }
+.sidebar-close-btn:hover { border-color: var(--text); color: var(--text); }
+.sidebar-nav { padding: .75rem .6rem; flex: 1; }
+.nav-item { display: flex; align-items: center; gap: .7rem; padding: .62rem .8rem; border-radius: 9px; text-decoration: none; color: var(--muted); font-family: 'DM Mono', monospace; font-size: .78rem; letter-spacing: .04em; transition: all .2s; margin-bottom: .1rem; cursor: pointer; border: none; background: transparent; width: 100%; text-align: left; }
+.nav-item:hover { color: var(--text); background: rgba(255,255,255,.04); }
+.nav-item.active { color: var(--accent); background: rgba(79,142,247,.1); }
+.nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+.nav-divider { height: 1px; background: var(--border); margin: .5rem .8rem; }
+.sidebar-section { font-family: 'DM Mono', monospace; font-size: .63rem; color: var(--muted); letter-spacing: .12em; text-transform: uppercase; padding: .75rem 1rem .4rem; }
+.age-mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; padding: .25rem .7rem .75rem; }
+.age-pill { padding: .45rem .5rem; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: 'DM Mono', monospace; font-size: .68rem; cursor: pointer; transition: all .2s; text-align: center; line-height: 1.4; }
+.age-pill:hover { border-color: var(--muted); color: var(--text); }
+.age-pill.active { border-color: var(--accent2); color: var(--accent2); background: rgba(167,139,250,.1); }
+.sidebar-footer { padding: .6rem .6rem 1rem; border-top: 1px solid var(--border); flex-shrink: 0; }
+.burger-btn { position: fixed; top: 1rem; left: 1rem; z-index: 300; width: 38px; height: 38px; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; cursor: pointer; color: var(--text); display: none; align-items: center; justify-content: center; transition: all .2s; box-shadow: 0 4px 16px rgba(0,0,0,.3); }
+.burger-btn:hover { border-color: var(--accent); color: var(--accent); }
+.burger-btn.visible { display: flex; }
+.burger-btn svg { width: 18px; height: 18px; }
+.main { margin-left: var(--sidebar-w); transition: margin-left .3s cubic-bezier(.4,0,.2,1); position: relative; z-index: 1; min-height: 100vh; }
+.main.expanded { margin-left: 0; }
+@media(max-width:900px){
+  .sidebar { transform: translateX(calc(-1 * var(--sidebar-w))); }
+  .sidebar.open { transform: translateX(0); }
+  .burger-btn { display: flex !important; }
+  .sidebar-overlay.visible { display: block; }
+  .main { margin-left: 0 !important; }
+}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="index.html" class="sidebar-logo">Social<span>Proof</span></a>
+    <button class="sidebar-close-btn" onclick="toggleSidebar()" title="Close sidebar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 6L6 18M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="index.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      Evaluate
+    </a>
+    <a href="lessons.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      Lessons
+    </a>
+    <a href="mindmap.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+      Mind Map
+    </a>
+    <a href="dashboard.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </a>
+    <div class="nav-divider"></div>
+    <a href="admin.html" class="nav-item active" id="sidebar-admin-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+      Admin
+    </a>
+  </nav>
+  <div class="sidebar-section">Age Mode</div>
+  <div class="age-mode-grid">
+    <button class="age-pill" id="age-kids"  onclick="setAgeMode('kids')">🎮<br>Kids</button>
+    <button class="age-pill" id="age-teen"  onclick="setAgeMode('teen')">⚡<br>Teen</button>
+    <button class="age-pill" id="age-adult" onclick="setAgeMode('adult')">📊<br>Adult</button>
+    <button class="age-pill" id="age-older" onclick="setAgeMode('older')">📖<br>Older</button>
+  </div>
+  <div class="sidebar-footer">
+    <a href="login.html" class="nav-item" id="sidebar-login-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+        <polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>
+      </svg>
+      Login
+    </a>
+  </div>
+</aside>
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+<button class="burger-btn" id="burger-btn" onclick="toggleSidebar()" title="Open menu">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <line x1="3" y1="6" x2="21" y2="6"/>
+    <line x1="3" y1="12" x2="21" y2="12"/>
+    <line x1="3" y1="18" x2="21" y2="18"/>
+  </svg>
+</button>
+<div class="main" id="main">
+<div class="app">
+
+<!-- Auth wall -->
+<div id="auth-wall" style="display:none;">
+  <div class="auth-wall">
+    <h3>Admin access required</h3>
+    <p>This panel is restricted to administrator accounts. Log in with an admin account to continue.</p>
+    <a href="login.html" class="btn btn-primary">Go to Login →</a>
+  </div>
+</div>
+
+<!-- Admin content -->
+<div id="admin-content" style="display:none;">
+
+  <!-- Overview -->
+  <div class="section-label">Research Overview
+    <button class="refresh-btn" onclick="loadAll()">↻ Refresh</button>
+  </div>
+  <div class="overview-grid" id="overview-grid"><div class="spinner"></div></div>
+
+  <!-- Distributions -->
+  <div class="two-col">
+    <div class="panel">
+      <div class="panel-title">System Verdict Distribution</div>
+      <div id="verdict-dist"><div class="spinner"></div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">User Confidence Distribution</div>
+      <div id="confidence-dist"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- Skipped steps -->
+  <div class="two-col">
+    <div class="panel">
+      <div class="panel-title">Most Skipped Evaluation Steps</div>
+      <div id="skipped-steps"><div class="spinner"></div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">User Performance Summary</div>
+      <div id="user-summary"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- Lesson impact -->
+  <div class="section-label">Lesson Trigger Impact</div>
+  <div class="panel" style="margin-bottom:2.5rem;overflow-x:auto;">
+    <div id="lesson-impact"><div class="spinner"></div></div>
+  </div>
+
+  <!-- All evaluations -->
+  <div class="section-label">All Evaluations</div>
+  <div class="panel" style="overflow-x:auto;">
+    <div id="evals-table"><div class="spinner"></div></div>
+    <div class="pagination" id="pagination"></div>
+  </div>
+
+  <!-- Corpus Builder -->
+  <div class="section-label" style="margin-top:2.5rem;">Corpus Builder
+    <span style="font-family:'DM Mono',monospace;font-size:.65rem;color:var(--green);margin-left:.5rem;">✦ integrated</span>
+  </div>
+  <div class="panel" style="margin-bottom:2.5rem;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.2rem;flex-wrap:wrap;gap:.8rem;">
+      <div>
+        <div class="panel-title" style="margin-bottom:.3rem;">Manual Sentence Ingest</div>
+        <div style="font-size:.8rem;color:var(--muted);max-width:500px;line-height:1.5;">Paste text from PSA, WHO, DOH, or any trusted source. Sentences are filtered for quality (numbers, attribution), reviewed here, then saved directly to <code style="font-family:'DM Mono',monospace;background:rgba(79,142,247,.1);padding:.1rem .3rem;border-radius:4px;">corpus.db</code> via the API.</div>
+      </div>
+      <div id="corpus-stats" style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--muted);text-align:right;"></div>
+    </div>
+
+    <!-- Source meta row -->
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:.8rem;margin-bottom:.8rem;">
+      <div>
+        <div class="panel-title" style="margin-bottom:.3rem;">Source URL</div>
+        <input id="cb-url" type="text" placeholder="https://psa.gov.ph/…" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.5rem .75rem;color:var(--text);font-size:.83rem;font-family:'DM Sans',sans-serif;outline:none;">
+      </div>
+      <div>
+        <div class="panel-title" style="margin-bottom:.3rem;">Source name</div>
+        <input id="cb-name" type="text" placeholder="PSA" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.5rem .75rem;color:var(--text);font-size:.83rem;font-family:'DM Sans',sans-serif;outline:none;">
+      </div>
+      <div>
+        <div class="panel-title" style="margin-bottom:.3rem;">Pipeline</div>
+        <select id="cb-pipeline" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.5rem .75rem;color:var(--text);font-size:.83rem;font-family:'DM Sans',sans-serif;outline:none;">
+          <option value="stats">stats</option>
+          <option value="factcheck">factcheck</option>
+          <option value="news">news</option>
+        </select>
+      </div>
+      <div>
+        <div class="panel-title" style="margin-bottom:.3rem;">Reputation</div>
+        <input id="cb-rep" type="number" value="0.95" min="0.65" max="1.0" step="0.05" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.5rem .75rem;color:var(--text);font-size:.83rem;font-family:'DM Mono',monospace;outline:none;">
+      </div>
+    </div>
+
+    <!-- Text input -->
+    <div style="margin-bottom:.8rem;">
+      <div class="panel-title" style="margin-bottom:.3rem;">Paste article / PDF text</div>
+      <textarea id="cb-raw" rows="5" placeholder="Paste text here. The tool will split it into sentences and highlight which ones contain numbers or attribution phrases." style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.6rem .75rem;color:var(--text);font-size:.83rem;font-family:'DM Sans',sans-serif;outline:none;resize:vertical;line-height:1.5;"></textarea>
+    </div>
+
+    <div style="display:flex;gap:.6rem;margin-bottom:1rem;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="cbExtract()" style="font-size:.82rem;padding:.5rem 1.1rem;">Extract sentences</button>
+      <button class="btn" onclick="cbSelectStats()" style="font-size:.82rem;padding:.5rem 1.1rem;">Select numbers only</button>
+      <button class="btn" onclick="cbSelectAll()" style="font-size:.82rem;padding:.5rem 1.1rem;">Select all</button>
+      <button class="btn" onclick="cbClearSel()" style="font-size:.82rem;padding:.5rem 1.1rem;">Clear</button>
+    </div>
+
+    <!-- Filter chips -->
+    <div id="cb-filter-bar" style="display:none;margin-bottom:.6rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+      <span style="font-family:'DM Mono',monospace;font-size:.65rem;color:var(--muted);">FILTER</span>
+      <span class="cb-chip active" onclick="cbSetFilter('all',this)">All</span>
+      <span class="cb-chip" onclick="cbSetFilter('num',this)">Has numbers</span>
+      <span class="cb-chip" onclick="cbSetFilter('attr',this)">Has attribution</span>
+      <span class="cb-chip" onclick="cbSetFilter('long',this)">Long (15+ words)</span>
+    </div>
+
+    <!-- Sentence list -->
+    <div id="cb-list" style="display:none;max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;margin-bottom:.8rem;"></div>
+
+    <!-- Save bar -->
+    <div id="cb-save-bar" style="display:none;display:flex;align-items:center;gap:.8rem;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="cbSave()" style="font-size:.82rem;padding:.5rem 1.1rem;background:var(--green);border-color:var(--green);">Save selected to corpus.db</button>
+      <span id="cb-sel-count" style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--muted);"></span>
+      <span id="cb-save-msg" style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--green);display:none;"></span>
+    </div>
+  </div>
+
+</div><!-- /admin-content -->
+</div><!-- /app -->
+
+<script>
+const API_BASE = window.__BACKEND_URL__ || '';
+const _role     = localStorage.getItem('sp_role');
+const _username = localStorage.getItem('sp_username') || 'Admin';
+let   _evalsPage = 1;
+function escapeHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+
+async function logout() {
+  await fetch(`${API_BASE}/auth/cookie-logout`, { method: 'POST', credentials: 'include' }).catch(() => {});
+  localStorage.clear();
+  window.location.href = 'login.html';
+}
+
+function authH() {
+  return { 'Content-Type': 'application/json' };
+}
+
+function labelClass(label) {
+  if (!label) return '';
+  return label.includes('Credible') ? 'pill-cred' : label.includes('Uncertain') ? 'pill-unc' : 'pill-mis';
+}
+
+function topicTag(t) {
+  const map = {
+    claim_detection:    ['tag-claim',    'Claim'],
+    source_verification:['tag-source',   'Source'],
+    bias_detection:     ['tag-bias',     'Bias'],
+    evidence_evaluation:['tag-evidence', 'Evidence'],
+    general:            ['tag-general',  'General'],
+  };
+  const [cls, label] = map[t] || ['tag-general', t];
+  return `<span class="tag ${cls}">${label}</span>`;
+}
+
+function distBars(items, labelKey, countKey, color) {
+  if (!items || !items.length) return '<div class="empty">No data yet.</div>';
+  const max = Math.max(...items.map(i => i[countKey]));
+  return items.map(i => `
+    <div class="dist-item">
+      <div class="dist-label">${i[labelKey] || '—'}</div>
+      <div class="dist-bar-wrap"><div class="dist-bar" style="width:${Math.round((i[countKey]/max)*100)}%;background:${color}"></div></div>
+      <div class="dist-count">${i[countKey]}</div>
+    </div>`).join('');
+}
+
+async function loadStats() {
+  try {
+    const res  = await fetch(`${API_BASE}/admin/stats`, { headers: authH(), credentials: 'include' });
+    if (res.status === 403) throw new Error('Not admin');
+    const data = await res.json();
+    const o    = data.overview || {};
+
+    document.getElementById('overview-grid').innerHTML = [
+      { val: o.total_evaluations  || 0, label: 'Total Evaluations',    sub: '',                           cls: 'c-blue' },
+      { val: o.total_users        || 0, label: 'Registered Users',      sub: `+ ${o.anonymous_sessions||0} anon sessions`, cls: 'c-accent2' },
+      { val: (o.label_accuracy_pct || 0) + '%', label: 'Label Accuracy', sub: 'User vs system verdict', cls: 'c-green' },
+      { val: o.avg_abs_score_diff || '—', label: 'Avg Score Diff',     sub: 'User vs system (abs)',       cls: 'c-orange' },
+      { val: (o.avg_score_shift   > 0 ? '+' : '') + (o.avg_score_shift || 0), label: 'Avg Score Shift', sub: 'After re-evaluation', cls: 'c-yellow' },
+      { val: o.total_lesson_triggers || 0, label: 'Lesson Triggers',   sub: `${o.lesson_read_rate_pct||0}% read rate`, cls: 'c-purple' },
+      { val: o.total_re_evaluations || 0, label: 'Re-Evaluations',     sub: 'Revised after seeing results', cls: 'c-red' },
+      { val: o.total_user_evaluations || 0, label: 'User Submissions', sub: 'Guided evaluations completed', cls: 'c-blue' },
+    ].map(c => `
+      <div class="ov-card">
+        <div class="ov-val ${c.cls}">${c.val}</div>
+        <div class="ov-label">${c.label}</div>
+        ${c.sub ? `<div class="ov-sub">${c.sub}</div>` : ''}
+      </div>`).join('');
+
+    document.getElementById('verdict-dist').innerHTML =
+      distBars(data.label_dist, 'system_label', 'count', 'var(--accent)');
+
+    document.getElementById('confidence-dist').innerHTML =
+      distBars(data.confidence_dist, 'confidence_level', 'count', 'var(--accent2)');
+
+    // Skipped steps
+    const steps = data.skipped_steps || {};
+    const stepItems = Object.entries(steps).sort((a,b) => b[1]-a[1]);
+    const maxSteps  = stepItems.length ? Math.max(...stepItems.map(s=>s[1])) : 1;
+    document.getElementById('skipped-steps').innerHTML = stepItems.length
+      ? stepItems.map(([name, count]) => `
+          <div class="dist-item">
+            <div class="dist-label">${name}</div>
+            <div class="dist-bar-wrap"><div class="dist-bar" style="width:${Math.round((count/maxSteps)*100)}%;background:var(--red)"></div></div>
+            <div class="dist-count">${count}</div>
+          </div>`).join('')
+      : '<div class="empty">No skipped steps recorded yet.</div>';
+
+    // User summary stats
+    document.getElementById('user-summary').innerHTML = `
+      <div class="dist-item"><div class="dist-label">Avg user score</div><div style="font-family:'DM Mono',monospace;font-size:.82rem;">${o.avg_user_score || '—'} / 100</div></div>
+      <div class="dist-item"><div class="dist-label">Avg system score</div><div style="font-family:'DM Mono',monospace;font-size:.82rem;">${o.avg_system_score || '—'} / 100</div></div>
+      <div class="dist-item"><div class="dist-label">Avg absolute diff</div><div style="font-family:'DM Mono',monospace;font-size:.82rem;">${o.avg_abs_score_diff || '—'} pts</div></div>
+      <div class="dist-item"><div class="dist-label">Label accuracy</div><div style="font-family:'DM Mono',monospace;font-size:.82rem;">${o.label_accuracy_pct || '—'}%</div></div>
+      <div class="dist-item"><div class="dist-label">Avg score shift</div><div style="font-family:'DM Mono',monospace;font-size:.82rem;">${(o.avg_score_shift > 0 ? '+' : '') + (o.avg_score_shift || 0)} pts after re-eval</div></div>`;
+
+  } catch(e) {
+    document.getElementById('overview-grid').innerHTML = `<div class="error-msg">Could not load stats: ${e.message}</div>`;
+  }
+}
+
+async function loadLessonImpact() {
+  try {
+    const res  = await fetch(`${API_BASE}/admin/lessons/impact`, { headers: authH(), credentials: 'include' });
+    const data = await res.json();
+    if (!data.length) { document.getElementById('lesson-impact').innerHTML = '<div class="empty">No lesson data yet.</div>'; return; }
+    document.getElementById('lesson-impact').innerHTML = `
+      <table class="data-table">
+        <thead><tr>
+          <th>Lesson</th><th>Topic</th><th>Triggers</th><th>Read Rate</th>
+          <th>Avg Score Shift After</th>
+        </tr></thead>
+        <tbody>${data.map(r => `
+          <tr>
+            <td title="${escapeHtml(r.title)}">${escapeHtml(r.title)}</td>
+            <td>${topicTag(r.topic)}</td>
+            <td style="font-family:'DM Mono',monospace;">${r.trigger_count || 0}</td>
+            <td>
+              ${r.read_rate_pct || 0}%
+              <span class="rate-bar"><span class="rate-fill" style="width:${r.read_rate_pct||0}%"></span></span>
+            </td>
+            <td style="font-family:'DM Mono',monospace;color:${(r.avg_score_shift_after||0)>0?'var(--green)':'var(--muted)'}">
+              ${r.avg_score_shift_after != null ? (r.avg_score_shift_after > 0 ? '+' : '') + r.avg_score_shift_after : '—'} pts
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } catch(e) {
+    document.getElementById('lesson-impact').innerHTML = `<div class="error-msg">Could not load lesson data.</div>`;
+  }
+}
+
+async function loadEvals(page = 1) {
+  _evalsPage = page;
+  document.getElementById('evals-table').innerHTML = '<div class="spinner"></div>';
+  try {
+    const res  = await fetch(`${API_BASE}/admin/evaluations?page=${page}&per_page=15`, { headers: authH(), credentials: 'include' });
+    const data = await res.json();
+    if (!data.data || !data.data.length) {
+      document.getElementById('evals-table').innerHTML = '<div class="empty">No evaluations yet.</div>';
+      document.getElementById('pagination').innerHTML = '';
+      return;
+    }
+    document.getElementById('evals-table').innerHTML = `
+      <table class="data-table">
+        <thead><tr>
+          <th>Content</th><th>System</th><th>Sys Sc.</th>
+          <th>User Sc.</th><th>Revised</th><th>Conf.</th><th>Skipped</th><th>Date</th>
+        </tr></thead>
+        <tbody>${data.data.map(r => {
+          const date = r.created_at ? new Date(r.created_at).toLocaleDateString('en-PH',{month:'short',day:'numeric'}) : '—';
+          const diff = (r.user_score != null && r.system_score != null) ? r.user_score - r.system_score : null;
+          const diffStr = diff == null ? '' : ` <span style="font-size:.65rem;color:${Math.abs(diff)>20?'var(--red)':Math.abs(diff)>10?'var(--orange)':'var(--green)'}">(${diff>0?'+':''}${diff})</span>`;
+          return `<tr>
+            <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);" title="${(r.content_preview||'').replace(/"/g,'&quot;')}">${escapeHtml(r.content_preview) || '—'}</td>
+            <td><span class="score-pill ${labelClass(r.system_label)}">${(r.system_label||'—').replace('Likely ','')}</span></td>
+            <td style="font-family:'DM Mono',monospace;">${r.system_score ?? '—'}</td>
+            <td style="font-family:'DM Mono',monospace;">${r.user_score ?? '—'}${diffStr}</td>
+            <td style="font-family:'DM Mono',monospace;color:var(--muted);">${r.revised_score ?? '—'}</td>
+            <td style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--muted);">${r.confidence_level || '—'}</td>
+            <td style="font-family:'DM Mono',monospace;font-size:.72rem;color:${r.steps_skipped>0?'var(--red)':'var(--muted)'};">${r.steps_skipped || 0}</td>
+            <td style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--muted);">${date}</td>
+          </tr>`;
+        }).join('')}
+        </tbody>
+      </table>`;
+
+    // Pagination
+    const total = data.total_pages || 1;
+    document.getElementById('pagination').innerHTML = `
+      <button class="page-btn" onclick="loadEvals(${page-1})" ${page<=1?'disabled':''}>← Prev</button>
+      <span class="page-info">Page ${page} of ${total}</span>
+      <button class="page-btn" onclick="loadEvals(${page+1})" ${page>=total?'disabled':''}>Next →</button>`;
+  } catch(e) {
+    document.getElementById('evals-table').innerHTML = `<div class="error-msg">Could not load evaluations.</div>`;
+  }
+}
+
+// ── Corpus Builder ──────────────────────────────────────────────────────────
+let _cbSentences = [];
+let _cbFilter    = 'all';
+
+const CB_ATTR = ['according to','reported by','data from','based on','percent','rate',
+                 'study','survey','report','published','released','found that','showed','indicated'];
+
+function cbHasNum(s)  { return /\d/.test(s); }
+function cbHasAttr(s) { return CB_ATTR.some(p => s.toLowerCase().includes(p)); }
+function cbIsLong(s)  { return s.split(' ').length >= 15; }
+function cbBadge(s)   {
+  if (cbHasNum(s) || cbHasAttr(s)) return ['cb-stat','stat'];
+  if (cbHasAttr(s))                return ['cb-fact','fact'];
+  return ['cb-news','news'];
+}
+
+function cbExtract() {
+  const raw = document.getElementById('cb-raw').value.trim();
+  if (!raw) return;
+  // Strip nav/menu lines before splitting — handles full-page pastes (PSA, WHO, DOH)
+  // Rules: must be 8+ words, contain at least one lowercase word 4+ chars long (real prose),
+  // and not start with common non-sentence patterns (RA, FAQ, Q:, bullet chars)
+  const PROSE_RE = /[a-z]{4,}/;
+  const SKIP_RE  = /^(RA\s\d|Q:|A:|FAQ|http|\u2022|\u25cf|[-•])/i;
+  const cleaned = raw.split(/\n+/)
+    .map(l => l.trim())
+    .filter(l => l.split(' ').length >= 8 && PROSE_RE.test(l) && !SKIP_RE.test(l))
+    .join(' ');
+  // Protect abbreviations from false sentence splits (No., Dr., Usec., Ph.D., RA No., etc.)
+  const abbrevProtected = cleaned
+    .replace(/\bNo\./g,   'No ')
+    .replace(/\bDr\./g,   'Dr ')
+    .replace(/\bMr\./g,   'Mr ')
+    .replace(/\bMs\./g,   'Ms ')
+    .replace(/\bMrs\./g,  'Mrs ')
+    .replace(/\bSt\./g,   'St ')
+    .replace(/\bvs\./g,   'vs ')
+    .replace(/\bAve\./g,  'Ave ')
+    .replace(/\bPhD\./gi, 'PhD ')
+    .replace(/\bUsec\./g, 'Usec ')
+    .replace(/\bSec\./g,  'Sec ')
+    .replace(/\bGen\./g,  'Gen ')
+    .replace(/\bDept\./g, 'Dept ')
+    .replace(/\bProc\./g, 'Proc ');
+  const splits = abbrevProtected.match(/[^.!?]+[.!?]+/g) || [];
+  _cbSentences = [...new Set(
+    splits.map(s => s.trim().replace(/ /g, '.'))
+          .map(s => s.replace(/\0/g, '.')).filter(s => s.length >= 40 && s.split(' ').length >= 5)
+  )];
+  if (!_cbSentences.length) {
+    document.getElementById('cb-list').style.display = '';
+    document.getElementById('cb-list').innerHTML = '<div class="empty">No sentences found. Try pasting just the article body text.</div>';
+    document.getElementById('cb-filter-bar').style.display = 'none';
+    document.getElementById('cb-save-bar').style.display   = 'none';
+    return;
+  }
+  document.getElementById('cb-filter-bar').style.display = 'flex';
+  document.getElementById('cb-list').style.display       = '';
+  document.getElementById('cb-save-bar').style.display   = 'flex';
+  cbRender();
+  cbUpdateCount();
+}
+
+function cbRender() {
+  let list = _cbSentences;
+  if (_cbFilter === 'num')  list = list.filter(cbHasNum);
+  if (_cbFilter === 'attr') list = list.filter(cbHasAttr);
+  if (_cbFilter === 'long') list = list.filter(cbIsLong);
+  const el = document.getElementById('cb-list');
+  if (!list.length) { el.innerHTML = '<div class="empty">No sentences match this filter.</div>'; return; }
+  el.innerHTML = list.map(s => {
+    const i = _cbSentences.indexOf(s);
+    const [cls, lbl] = cbBadge(s);
+    return `<div class="cb-sent" id="cbs_${i}" onclick="cbToggle(${i})">
+      <input type="checkbox" id="cbcb_${i}" style="margin-top:3px;flex-shrink:0" onclick="event.stopPropagation()" onchange="cbSync(${i})">
+      <span class="cb-sent-text">${s}<span class="cb-badge ${cls}">${lbl}</span></span>
+    </div>`;
+  }).join('');
+}
+
+function cbToggle(i) {
+  // Called by row click — flip the checkbox manually then sync highlight
+  const cb  = document.getElementById('cbcb_'+i);
+  const row = document.getElementById('cbs_'+i);
+  if (!cb) return;
+  cb.checked = !cb.checked;
+  row.classList.toggle('checked', cb.checked);
+  cbUpdateCount();
+}
+
+function cbSync(i) {
+  // Called by checkbox onchange — browser already flipped it, just sync the highlight
+  const cb  = document.getElementById('cbcb_'+i);
+  const row = document.getElementById('cbs_'+i);
+  if (!cb || !row) return;
+  row.classList.toggle('checked', cb.checked);
+  cbUpdateCount();
+}
+
+function cbSelectAll()   { _cbSentences.forEach((_,i)=>{ const c=document.getElementById('cbcb_'+i); const r=document.getElementById('cbs_'+i); if(c){c.checked=true; r&&r.classList.add('checked');}}); cbUpdateCount(); }
+function cbClearSel()    { _cbSentences.forEach((_,i)=>{ const c=document.getElementById('cbcb_'+i); const r=document.getElementById('cbs_'+i); if(c){c.checked=false; r&&r.classList.remove('checked');}}); cbUpdateCount(); }
+function cbSelectStats() { _cbSentences.forEach((s,i)=>{ const c=document.getElementById('cbcb_'+i); const r=document.getElementById('cbs_'+i); if(c){const v=cbHasNum(s)||cbHasAttr(s); c.checked=v; r&&r.classList.toggle('checked',v);}}); cbUpdateCount(); }
+
+function cbUpdateCount() {
+  const n = _cbSentences.filter((_,i)=>document.getElementById('cbcb_'+i)?.checked).length;
+  document.getElementById('cb-sel-count').textContent = n > 0 ? `${n} selected` : '';
+}
+
+function cbSetFilter(f, el) {
+  _cbFilter = f;
+  document.querySelectorAll('.cb-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  cbRender();
+}
+
+async function cbSave() {
+  const selected = _cbSentences.filter((_,i)=>document.getElementById('cbcb_'+i)?.checked);
+  if (!selected.length) { alert('Select at least one sentence first.'); return; }
+
+  const url      = document.getElementById('cb-url').value.trim() || '';
+  const name     = document.getElementById('cb-name').value.trim() || 'Manual';
+  const pipeline = document.getElementById('cb-pipeline').value;
+  const rep      = parseFloat(document.getElementById('cb-rep').value) || 0.95;
+  const domain   = url.replace(/https?:\/\/(www\.)?/,'').split('/')[0] || name.toLowerCase().replace(/\s+/g,'-');
+
+  const btn = document.querySelector('[onclick="cbSave()"]');
+  if (btn) { btn.disabled=true; btn.textContent='Saving…'; }
+  const msg = document.getElementById('cb-save-msg');
+  msg.style.display='none';
+
+  try {
+    const res = await fetch(`${API_BASE}/admin/corpus/ingest`, {
+      method: 'POST',
+      headers: authH(),
+      body: JSON.stringify({ sentences: selected, source_domain: domain,
+        source_name: name, url, pipeline, reputation: rep }),
+    });
+    if (!res.ok) throw new Error((await res.json().catch(()=>({}))).detail || res.status);
+    const data = await res.json();
+    msg.textContent = `✓ ${data.inserted} sentence${data.inserted!==1?'s':''} saved to corpus.db`;
+    msg.style.display = 'inline';
+    cbClearSel();
+    document.getElementById('cb-raw').value = '';
+    document.getElementById('cb-list').style.display   = 'none';
+    document.getElementById('cb-save-bar').style.display = 'none';
+    document.getElementById('cb-filter-bar').style.display = 'none';
+    _cbSentences = [];
+    loadCorpusStats();
+  } catch(e) {
+    msg.textContent = `Error: ${e.message}`;
+    msg.style.color = 'var(--red)';
+    msg.style.display = 'inline';
+  } finally {
+    if (btn) { btn.disabled=false; btn.textContent='Save selected to corpus.db'; }
+  }
+}
+
+async function loadCorpusStats() {
+  try {
+    const res  = await fetch(`${API_BASE}/admin/corpus/stats`, { headers: authH(), credentials: 'include' });
+    if (!res.ok) return;
+    const d = await res.json();
+    document.getElementById('corpus-stats').innerHTML =
+      `<div style="color:var(--accent)">${d.total_sentences?.toLocaleString() ?? '—'}</div>` +
+      `<div>total sentences</div>` +
+      `<div style="margin-top:.3rem;color:var(--muted)">${d.sources ?? '—'} sources · ${d.pipelines ?? ''}</div>`;
+  } catch(_) {}
+}
+
+function loadAll() {
+  loadStats();
+  loadLessonImpact();
+  loadEvals(1);
+  loadCorpusStats();
+}
+
+// ── Init ───────────────────────────────────────────────────
+if (_role !== 'admin') {
+  document.getElementById('auth-wall').style.display = 'block';
+} else {
+  document.getElementById('admin-content').style.display = 'block';
+  loadAll();
+}
+</script>
+
+<script>
+// ── Sidebar ────────────────────────────────────────────────
+const sidebar   = document.getElementById('sidebar');
+const mainEl    = document.getElementById('main');
+const burgerBtn = document.getElementById('burger-btn');
+const overlay   = document.getElementById('sidebar-overlay');
+let sidebarOpen = window.innerWidth >= 900;
+
+function initSidebar() {
+  if (window.innerWidth < 900) {
+    sidebar.classList.add('collapsed'); mainEl.classList.add('expanded');
+    burgerBtn.classList.add('visible'); sidebarOpen = false;
+  } else {
+    sidebar.classList.remove('collapsed'); mainEl.classList.remove('expanded');
+    burgerBtn.classList.remove('visible'); sidebarOpen = true;
+  }
+}
+function toggleSidebar() {
+  sidebarOpen = !sidebarOpen;
+  if (sidebarOpen) {
+    sidebar.classList.remove('collapsed');
+    if (window.innerWidth >= 900) mainEl.classList.remove('expanded');
+    else overlay.classList.add('visible');
+    burgerBtn.classList.remove('visible');
+  } else {
+    sidebar.classList.add('collapsed'); mainEl.classList.add('expanded');
+    overlay.classList.remove('visible'); burgerBtn.classList.add('visible');
+  }
+}
+window.addEventListener('resize', initSidebar);
+initSidebar();
+
+function setAgeMode(mode) {
+  localStorage.setItem('sp_age_mode', mode);
+  document.querySelectorAll('.age-pill').forEach(el => el.classList.remove('active'));
+  const pill = document.getElementById('age-' + mode);
+  if (pill) pill.classList.add('active');
+}
+(function() {
+  const saved = localStorage.getItem('sp_age_mode') || 'adult';
+  const pill = document.getElementById('age-' + saved);
+  if (pill) pill.classList.add('active');
+})();
+
+// auth-aware login link
+(function() {
+  const username = localStorage.getItem('sp_username');
+  const loginLink = document.getElementById('sidebar-login-link');
+  if (username && loginLink) {
+    loginLink.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Log out';
+    loginLink.href = '#';
+    loginLink.style.color = 'var(--red)';
+    loginLink.onclick = async e => {
+      e.preventDefault();
+      await fetch('/auth/cookie-logout',{method:'POST',credentials:'include'}).catch(()=>{});
+      localStorage.clear(); window.location.href = 'login.html';
+    };
+  }
+})();
+</script>
+</body>
+</html>

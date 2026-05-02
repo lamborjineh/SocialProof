@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="/env-config.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SocialProof — Learn</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+/* ── Hide all scrollbars ────────────────────────────────── */
+*{scrollbar-width:none;-ms-overflow-style:none;}
+*::-webkit-scrollbar{display:none;}
+
+:root{
+  --bg:#0d0f14;--surface:#13161e;--card:#181c27;--border:#252a3a;
+  --text:#e8eaf0;--muted:#6b7394;
+  --accent:#4f8ef7;--accent2:#a78bfa;
+  --green:#34d399;--red:#f87171;--orange:#fb923c;--blue:#60a5fa;--yellow:#fbbf24;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:0;opacity:.5;
+}
+.grid-bg{position:fixed;inset:0;background-image:linear-gradient(rgba(79,142,247,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(79,142,247,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+.app{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:2rem 1.5rem 6rem;}
+
+header{display:flex;align-items:center;justify-content:space-between;padding:1.5rem 0 3rem;border-bottom:1px solid var(--border);margin-bottom:3rem;}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.4rem;letter-spacing:-.02em;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.logo span{font-weight:400;opacity:.6;-webkit-text-fill-color:rgba(232,234,240,.4);}
+nav a{font-family:'DM Mono',monospace;font-size:.78rem;color:var(--muted);text-decoration:none;margin-left:1.5rem;letter-spacing:.05em;transition:color .2s;}
+nav a:hover,nav a.active{color:var(--text);}
+nav a.active{color:var(--accent);}
+
+.section-label{font-family:'DM Mono',monospace;font-size:.72rem;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.6rem;display:flex;align-items:center;gap:.5rem;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+h2{font-family:'Syne',sans-serif;font-weight:700;font-size:1.5rem;margin-bottom:1.5rem;letter-spacing:-.02em;}
+
+/* Filter bar */
+.filter-bar{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:2rem;}
+.filter-btn{font-family:'DM Mono',monospace;font-size:.73rem;padding:.4rem 1rem;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .2s;letter-spacing:.04em;}
+.filter-btn:hover{border-color:var(--muted);color:var(--text);}
+.filter-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+/* Lesson grid */
+.lessons-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.2rem;}
+.lesson-card{
+  background:var(--card);border:1px solid var(--border);border-radius:16px;
+  padding:1.6rem;cursor:pointer;transition:all .25s;position:relative;overflow:hidden;
+}
+.lesson-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(79,142,247,.05),rgba(167,139,250,.03));opacity:0;transition:opacity .25s;}
+.lesson-card:hover{border-color:var(--accent);transform:translateY(-3px);box-shadow:0 12px 30px rgba(0,0,0,.3);}
+.lesson-card:hover::before{opacity:1;}
+.lesson-card.completed{opacity:.7;}
+.lesson-card.completed::after{
+  content:'✓';position:absolute;top:.8rem;right:.8rem;
+  background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.3);
+  border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;
+  font-size:.7rem;font-weight:700;
+}
+.lesson-topic-tag{font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.08em;padding:.25rem .7rem;border-radius:20px;display:inline-flex;align-items:center;gap:.4rem;margin-bottom:1rem;text-transform:uppercase;}
+.tag-claim{background:rgba(96,165,250,.12);color:var(--blue);border:1px solid rgba(96,165,250,.2);}
+.tag-source{background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.2);}
+.tag-bias{background:rgba(251,146,60,.1);color:var(--orange);border:1px solid rgba(251,146,60,.2);}
+.tag-evidence{background:rgba(167,139,250,.1);color:var(--accent2);border:1px solid rgba(167,139,250,.2);}
+.tag-general{background:rgba(107,115,148,.12);color:var(--muted);border:1px solid rgba(107,115,148,.2);}
+.lesson-icon{font-size:1.6rem;margin-bottom:.7rem;display:block;}
+.lesson-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:.5rem;line-height:1.3;}
+.lesson-preview{font-size:.84rem;color:var(--muted);line-height:1.6;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.lesson-footer{margin-top:1rem;display:flex;align-items:center;justify-content:space-between;}
+.lesson-diff{font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.06em;color:var(--muted);display:flex;align-items:center;gap:.4rem;}
+.diff-dot{width:6px;height:6px;border-radius:50%;}
+.diff-beginner .diff-dot{background:var(--green);}
+.diff-intermediate .diff-dot{background:var(--yellow);}
+.diff-advanced .diff-dot{background:var(--red);}
+.read-time{font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted);opacity:.7;}
+
+/* Progress strip */
+.progress-strip{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.2rem 1.5rem;margin-bottom:2rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
+.progress-strip-label{font-family:'DM Mono',monospace;font-size:.72rem;color:var(--muted);letter-spacing:.06em;}
+.progress-strip-val{font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;color:var(--accent);}
+.progress-bar-mini{flex:1;min-width:120px;height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
+.progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width .6s ease;}
+
+/* Search */
+.search-wrap{position:relative;margin-bottom:1.5rem;}
+.search-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.75rem 1rem .75rem 2.8rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.92rem;outline:none;transition:border-color .2s;}
+.search-input:focus{border-color:var(--accent);}
+.search-input::placeholder{color:var(--muted);}
+.search-icon{position:absolute;left:.9rem;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.9rem;pointer-events:none;}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);z-index:100;display:flex;align-items:center;justify-content:center;padding:1.5rem;opacity:0;pointer-events:none;transition:opacity .3s;}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:20px;max-width:620px;width:100%;max-height:88vh;overflow-y:auto;transform:translateY(20px);transition:transform .3s;padding:2.2rem;}
+.modal-overlay.open .modal{transform:translateY(0);}
+.modal-close{float:right;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'DM Mono',monospace;font-size:.75rem;padding:.35rem .8rem;border-radius:8px;cursor:pointer;transition:all .2s;}
+.modal-close:hover{border-color:var(--red);color:var(--red);}
+.modal-title{font-family:'Syne',sans-serif;font-weight:800;font-size:1.4rem;margin-bottom:1.2rem;letter-spacing:-.02em;clear:both;}
+.modal-content{font-size:.93rem;line-height:1.75;color:var(--muted);}
+.modal-content p{margin-bottom:.9rem;}
+.modal-content strong{color:var(--text);}
+.modal-content ul{padding-left:1.2rem;margin-bottom:.9rem;}
+.modal-content li{margin-bottom:.4rem;}
+.takeaway{background:linear-gradient(135deg,rgba(79,142,247,.08),rgba(167,139,250,.06));border:1px solid rgba(79,142,247,.2);border-radius:12px;padding:1.1rem 1.3rem;margin-top:1.5rem;}
+.takeaway-label{font-family:'DM Mono',monospace;font-size:.68rem;color:var(--accent);letter-spacing:.1em;margin-bottom:.5rem;}
+.takeaway-text{font-size:.88rem;line-height:1.6;color:var(--text);}
+
+/* ── Inline micro-quiz ──────────────────────────────────── */
+.micro-quiz{
+  margin-top:1.5rem;border-top:1px solid var(--border);padding-top:1.5rem;
+}
+.micro-quiz-label{font-family:'DM Mono',monospace;font-size:.68rem;color:var(--accent2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.9rem;}
+.micro-quiz-q{font-size:.9rem;font-weight:500;line-height:1.55;margin-bottom:1rem;color:var(--text);}
+.micro-options{display:flex;flex-direction:column;gap:.5rem;}
+.micro-opt{
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:.65rem 1rem;font-size:.86rem;text-align:left;cursor:pointer;
+  transition:all .2s;display:flex;align-items:center;gap:.65rem;
+}
+.micro-opt:hover:not(:disabled){border-color:rgba(79,142,247,.45);background:rgba(79,142,247,.06);}
+.micro-opt:disabled{cursor:default;}
+.micro-opt.correct{border-color:rgba(52,211,153,.5);background:rgba(52,211,153,.1);color:var(--green);}
+.micro-opt.wrong{border-color:rgba(248,113,113,.4);background:rgba(248,113,113,.08);color:var(--red);}
+.micro-opt.reveal{border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.05);}
+.micro-opt-letter{font-family:'DM Mono',monospace;font-size:.68rem;width:20px;height:20px;border-radius:50%;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.micro-feedback{margin-top:.8rem;padding:.75rem 1rem;border-radius:10px;font-size:.83rem;line-height:1.55;display:none;}
+.micro-feedback.show{display:block;}
+.micro-feedback.correct{background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2);color:var(--green);}
+.micro-feedback.wrong{background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.2);color:var(--red);}
+.micro-loading{font-family:'DM Mono',monospace;font-size:.72rem;color:var(--muted);padding:.5rem 0;opacity:.7;}
+
+/* Mark complete btn */
+.mark-complete-btn{
+  display:inline-flex;align-items:center;gap:.5rem;margin-top:1.5rem;
+  font-family:'Syne',sans-serif;font-weight:600;font-size:.85rem;
+  padding:.65rem 1.4rem;border-radius:10px;border:none;cursor:pointer;transition:all .2s;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;
+}
+.mark-complete-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(79,142,247,.3);}
+.mark-complete-btn.done{background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.3);cursor:default;transform:none;box-shadow:none;}
+
+/* XP flash */
+@keyframes xpFlash{0%{opacity:0;transform:translateY(0) scale(.8)}30%{opacity:1;transform:translateY(-20px) scale(1)}100%{opacity:0;transform:translateY(-50px) scale(.9)}}
+.xp-popup{
+  position:fixed;font-family:'Syne',sans-serif;font-weight:800;font-size:1.3rem;
+  color:var(--green);pointer-events:none;z-index:999;
+  animation:xpFlash .9s ease forwards;
+}
+
+.empty-state{text-align:center;padding:3rem;color:var(--muted);font-size:.9rem;}
+.empty-state span{font-size:2rem;display:block;margin-bottom:.8rem;}
+.spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;margin:2rem auto;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media(max-width:600px){
+  .lessons-grid{grid-template-columns:1fr;}
+  .filter-bar{gap:.4rem;}
+}
+
+/* ── Variables (sidebar layout) ───────────────────────────── */
+:root { --sidebar-w: 256px; }
+
+.sidebar {
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: var(--sidebar-w);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  transition: transform .3s cubic-bezier(.4,0,.2,1);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.sidebar.collapsed { transform: translateX(calc(-1 * var(--sidebar-w))); }
+.sidebar-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); backdrop-filter: blur(4px); z-index: 190; opacity: 0; pointer-events: none; transition: opacity .3s; }
+.sidebar-overlay.visible { opacity: 1; pointer-events: all; }
+.sidebar-header { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1rem 1rem; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.sidebar-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.15rem; letter-spacing: -.02em; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-decoration: none; }
+.sidebar-logo span { font-weight: 400; opacity: .55; -webkit-text-fill-color: rgba(232,234,240,.35); }
+.sidebar-close-btn { width: 30px; height: 30px; background: transparent; border: 1px solid var(--border); border-radius: 7px; cursor: pointer; color: var(--muted); display: flex; align-items: center; justify-content: center; transition: all .2s; flex-shrink: 0; }
+.sidebar-close-btn:hover { border-color: var(--text); color: var(--text); }
+.sidebar-nav { padding: .75rem .6rem; flex: 1; }
+.nav-item { display: flex; align-items: center; gap: .7rem; padding: .62rem .8rem; border-radius: 9px; text-decoration: none; color: var(--muted); font-family: 'DM Mono', monospace; font-size: .78rem; letter-spacing: .04em; transition: all .2s; margin-bottom: .1rem; cursor: pointer; border: none; background: transparent; width: 100%; text-align: left; }
+.nav-item:hover { color: var(--text); background: rgba(255,255,255,.04); }
+.nav-item.active { color: var(--accent); background: rgba(79,142,247,.1); }
+.nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+.nav-divider { height: 1px; background: var(--border); margin: .5rem .8rem; }
+.sidebar-section { font-family: 'DM Mono', monospace; font-size: .63rem; color: var(--muted); letter-spacing: .12em; text-transform: uppercase; padding: .75rem 1rem .4rem; }
+.sidebar-footer { padding: .6rem .6rem 1rem; border-top: 1px solid var(--border); flex-shrink: 0; }
+.burger-btn { position: fixed; top: 1rem; left: 1rem; z-index: 300; width: 38px; height: 38px; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; cursor: pointer; color: var(--text); display: none; align-items: center; justify-content: center; transition: all .2s; box-shadow: 0 4px 16px rgba(0,0,0,.3); }
+.burger-btn:hover { border-color: var(--accent); color: var(--accent); }
+.burger-btn.visible { display: flex; }
+.burger-btn svg { width: 18px; height: 18px; }
+.page-main { margin-left: var(--sidebar-w); transition: margin-left .3s cubic-bezier(.4,0,.2,1); position: relative; z-index: 1; min-height: 100vh; }
+.page-main.expanded { margin-left: 0; }
+@media(max-width:900px){ .page-main { margin-left: 0 !important; } .sidebar { transform: translateX(calc(-1 * var(--sidebar-w))); } .sidebar.open { transform: translateX(0); } .burger-btn { display: flex !important; } .sidebar-overlay.visible { display: block; } }
+
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<!-- ══ SIDEBAR ══════════════════════════════════════════════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="index.html" class="sidebar-logo">Social<span>Proof</span></a>
+    <button class="sidebar-close-btn" onclick="toggleSidebar()" title="Close sidebar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="index.html" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>Evaluate</a>
+    <a href="lessons.html" class="nav-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Lessons</a>
+    <a href="mindmap.html" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>Mind Map</a>
+    <a href="challenge.html" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Challenge</a>
+    <a href="dashboard.html" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
+    <div class="nav-divider"></div>
+    <a href="admin.html" class="nav-item" id="sidebar-admin-link" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Admin
+    </a>
+  </nav>
+  <div class="sidebar-footer">
+    <a href="login.html" class="nav-item" id="sidebar-login-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>Login
+    </a>
+  </div>
+</aside>
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+<button class="burger-btn" id="burger-btn" onclick="toggleSidebar()" title="Open menu">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+</button>
+<div class="page-main" id="page-main">
+<div class="app">
+
+
+<div class="section-label">Media Literacy <span>Knowledge Base</span></div>
+<h2>Learn the Skills</h2>
+<p style="margin-bottom:2rem;line-height:1.6;color:var(--muted);font-size:.93rem;">
+  Micro-lessons that sharpen your ability to identify claims, evaluate sources, detect bias, and assess evidence.
+  Each lesson ends with a quick comprehension check — answer it to earn your completion mark.
+</p>
+
+<!-- Progress strip -->
+<div class="progress-strip">
+  <div>
+    <div class="progress-strip-label">LESSONS COMPLETED</div>
+    <div class="progress-strip-val" id="read-count">0 / 0</div>
+  </div>
+  <div class="progress-bar-mini">
+    <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+  </div>
+  <div style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--muted);">Complete the check at the end of each lesson</div>
+</div>
+
+<!-- Search -->
+<div class="search-wrap">
+  <span class="search-icon">🔎</span>
+  <input class="search-input" id="search" placeholder="Search lessons…" oninput="filterLessons()">
+</div>
+
+<!-- Filter bar -->
+<div class="filter-bar">
+  <button class="filter-btn active" data-filter="all" onclick="setFilter(this,'all')">📚 All</button>
+  <button class="filter-btn" data-filter="claim_detection" onclick="setFilter(this,'claim_detection')">🎯 Claim Detection</button>
+  <button class="filter-btn" data-filter="source_verification" onclick="setFilter(this,'source_verification')">🔍 Source Verification</button>
+  <button class="filter-btn" data-filter="bias_detection" onclick="setFilter(this,'bias_detection')">🔥 Bias Detection</button>
+  <button class="filter-btn" data-filter="evidence_evaluation" onclick="setFilter(this,'evidence_evaluation')">📊 Evidence Evaluation</button>
+  <button class="filter-btn" data-filter="general" onclick="setFilter(this,'general')">📖 General MIL</button>
+</div>
+
+<!-- Lessons grid -->
+<div class="lessons-grid" id="lessons-grid"><div class="spinner"></div></div>
+<div class="empty-state" id="empty-state" style="display:none;">
+  <span>🔍</span>No lessons match your search.
+</div>
+
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
+  <div class="modal" id="modal">
+    <button class="modal-close" onclick="closeModal()">✕ Close</button>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+const API_BASE = window.__BACKEND_URL__ || '';
+let LESSONS     = [];   // loaded from /lessons API
+let currentFilter = 'all';
+let completedKeys = new Set(JSON.parse(localStorage.getItem('sp_read_lessons') || '[]'));
+
+// ── Frontend metadata map (icon + preview + takeaway by lesson_key) ───────────
+// New lessons added to the DB without entries here get auto-generated previews.
+const LESSON_META = {
+  identify_claims:    { icon:'🎯', takeaway:'Ask yourself: "Can this be independently verified?" If yes — it\'s a claim that deserves fact-checking.' },
+  multiple_claims:    { icon:'📋', takeaway:'Break compound sentences into individual claims and evaluate each one separately.' },
+  source_verification:{ icon:'🔍', takeaway:'Before trusting any content, take 60 seconds to check: Who published this? When? Can I find their editorial standards?' },
+  primary_vs_secondary:{ icon:'🏛️', takeaway:'"Studies show…" tells you nothing. Always ask: Which study? Where is the link? What did it actually say?' },
+  recognize_bias:     { icon:'🔥', takeaway:'The more emotional a post makes you feel, the more carefully you should read it.' },
+  clickbait_headlines:{ icon:'🪤', takeaway:'Always read past the headline. A sensational headline that matches a measured article is rare.' },
+  evaluate_evidence:  { icon:'📊', takeaway:'"Studies show" is not evidence. The citation, sample size, methodology, and publication venue are what make evidence credible.' },
+  correlation_causation:{ icon:'🔗', takeaway:'When a post says "X is linked to Y," that\'s correlation — not proof that X causes Y.' },
+  general_mil:        { icon:'📖', takeaway:'MIL doesn\'t make you a cynic — it makes you a more informed, empowered consumer of information.' },
+  confirmation_bias:  { icon:'🧠', takeaway:'The content you agree with most strongly deserves the most scrutiny — not the least.' },
+};
+
+// Default icon by topic
+const TOPIC_ICONS = {
+  claim_detection:'🎯', source_verification:'🔍', bias_detection:'⚡',
+  evidence_evaluation:'📊', general:'📖',
+};
+
+const TOPIC_META = {
+  claim_detection:    { label:'Claim Detection',    cls:'tag-claim' },
+  source_verification:{ label:'Source Verification', cls:'tag-source' },
+  bias_detection:     { label:'Bias Detection',      cls:'tag-bias' },
+  evidence_evaluation:{ label:'Evidence Evaluation', cls:'tag-evidence' },
+  general:            { label:'General MIL',         cls:'tag-general' },
+};
+
+// Strip HTML tags for preview generation
+function stripHtml(html) {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
+}
+
+// Estimate reading time in minutes
+function readTime(content) {
+  const words = stripHtml(content).split(/\s+/).length;
+  const mins  = Math.max(1, Math.round(words / 200));
+  return `${mins} min read`;
+}
+
+// ── Fetch lessons from API ─────────────────────────────────────────────────────
+async function loadLessons() {
+  try {
+    const res  = await fetch(`${API_BASE}/lessons`, { credentials: 'include' });
+    const data = await res.json();
+    if (!Array.isArray(data) || !data.length) throw new Error('empty');
+    LESSONS = data.map(l => ({
+      ...l,
+      key:     l.lesson_key || l.key || String(l.id),
+      icon:    (LESSON_META[l.lesson_key] || {}).icon || TOPIC_ICONS[l.topic] || '📄',
+      preview: stripHtml(l.content || '').slice(0, 140) + '…',
+      takeaway:(LESSON_META[l.lesson_key] || {}).takeaway || '',
+    }));
+  } catch(e) {
+    // Graceful fallback — show friendly error
+    document.getElementById('lessons-grid').innerHTML =
+      '<p style="color:var(--muted);font-size:.88rem;">Could not load lessons — make sure the API is running.</p>';
+    return;
+  }
+  updateProgress();
+  renderGrid(getFiltered());
+}
+
+// ── Render grid ────────────────────────────────────────────────────────────────
+function renderGrid(list) {
+  const grid  = document.getElementById('lessons-grid');
+  const empty = document.getElementById('empty-state');
+  if (!list.length) { grid.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  grid.innerHTML = list.map(l => {
+    const tm     = TOPIC_META[l.topic] || { label: l.topic, cls: 'tag-general' };
+    const done   = completedKeys.has(l.key);
+    const rt     = readTime(l.content || l.preview || '');
+    return `
+      <div class="lesson-card ${done?'completed':''}" onclick="openLesson('${l.key}')">
+        <div class="lesson-topic-tag ${tm.cls}">${tm.label}</div>
+        <span class="lesson-icon">${l.icon}</span>
+        <div class="lesson-title">${l.title}</div>
+        <div class="lesson-preview">${l.preview}</div>
+        <div class="lesson-footer">
+          <span class="lesson-diff diff-${l.difficulty}">
+            <span class="diff-dot"></span>${l.difficulty.charAt(0).toUpperCase()+l.difficulty.slice(1)}
+          </span>
+          <span class="read-time">⏱ ${rt}</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function getFiltered() {
+  const q = (document.getElementById('search').value || '').toLowerCase();
+  return LESSONS.filter(l => {
+    const matchTopic  = currentFilter === 'all' || l.topic === currentFilter;
+    const matchSearch = !q || l.title.toLowerCase().includes(q) || l.preview.toLowerCase().includes(q);
+    return matchTopic && matchSearch;
+  });
+}
+
+function filterLessons() { renderGrid(getFiltered()); }
+
+function setFilter(btn, filter) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentFilter = filter;
+  filterLessons();
+}
+
+// ── Open lesson modal ──────────────────────────────────────────────────────────
+async function openLesson(key) {
+  const l = LESSONS.find(x => x.key === key);
+  if (!l) return;
+  const tm  = TOPIC_META[l.topic] || { label: l.topic, cls: 'tag-general' };
+  const done = completedKeys.has(key);
+  const diffColor = { beginner:'var(--green)', intermediate:'var(--yellow)', advanced:'var(--red)' }[l.difficulty] || 'var(--muted)';
+  const rt = readTime(l.content || '');
+
+  document.getElementById('modal-body').innerHTML = `
+    <div class="lesson-topic-tag ${tm.cls}" style="margin-bottom:1.2rem;">${tm.label}</div>
+    <div style="font-size:2rem;margin-bottom:.6rem;">${l.icon}</div>
+    <div class="modal-title">${l.title}</div>
+    <div style="display:flex;gap:.9rem;align-items:center;margin-bottom:1.2rem;flex-wrap:wrap;">
+      <span class="lesson-diff diff-${l.difficulty}" style="font-family:'DM Mono',monospace;font-size:.68rem;letter-spacing:.06em;color:var(--muted);display:flex;align-items:center;gap:.4rem;">
+        <span class="diff-dot" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${diffColor}"></span>
+        ${l.difficulty.toUpperCase()}
+      </span>
+      <span style="font-family:'DM Mono',monospace;font-size:.65rem;color:var(--muted);">⏱ ${rt}</span>
+      ${l.mil_skill ? `<span style="font-family:'DM Mono',monospace;font-size:.65rem;color:var(--accent2);">MIL: ${l.mil_skill}</span>` : ''}
+    </div>
+    <div class="modal-content">${l.content || l.preview || ''}</div>
+    ${l.takeaway ? `<div class="takeaway"><div class="takeaway-label">KEY TAKEAWAY</div><div class="takeaway-text">${l.takeaway}</div></div>` : ''}
+
+    <!-- Micro-quiz section -->
+    <div class="micro-quiz">
+      <div class="micro-quiz-label">⚡ Quick Check — answer to complete this lesson</div>
+      <div id="micro-quiz-area"><div class="micro-loading">Loading question…</div></div>
+    </div>
+
+    <!-- Mark complete button (shown if no quiz available or after attempting) -->
+    <div id="mark-area" style="display:none;">
+      <button class="mark-complete-btn ${done?'done':''}" id="mark-btn" onclick="markComplete('${key}')"
+        ${done?'disabled':''}>
+        ${done ? '✓ Completed' : '✓ Mark as Complete'}
+      </button>
+    </div>
+  `;
+
+  document.getElementById('modal-overlay').classList.add('open');
+  loadMicroQuiz(l.topic, key, done);
+}
+
+// ── Load micro-quiz for lesson modal ──────────────────────────────────────────
+async function loadMicroQuiz(topic, lessonKey, alreadyDone) {
+  const area = document.getElementById('micro-quiz-area');
+  if (!area) return;
+  try {
+    const res  = await fetch(`${API_BASE}/quiz?topic=${topic}&limit=1`, { credentials: 'include' });
+    const data = await res.json();
+    if (!data || !data.length) throw new Error('no q');
+    const q       = data[0];
+    const options = Array.isArray(q.options) ? q.options : JSON.parse(q.options || '[]');
+    const letters = ['A','B','C','D'];
+
+    area.innerHTML = `
+      <div class="micro-quiz-q">${q.question_text}</div>
+      <div class="micro-options" id="micro-options">
+        ${options.map((opt,i) => `
+          <button class="micro-opt" data-idx="${i}"
+            onclick="answerMicro(${i},${q.correct_index},'${(q.explanation||'').replace(/'/g,"\\'")}','${lessonKey}')">
+            <span class="micro-opt-letter">${letters[i]||i}</span>
+            <span>${opt}</span>
+          </button>`).join('')}
+      </div>
+      <div class="micro-feedback" id="micro-feedback"></div>
+    `;
+  } catch(e) {
+    // No quiz available — just show the manual mark button
+    area.innerHTML = '<p style="font-size:.8rem;color:var(--muted);">No check available for this lesson.</p>';
+    document.getElementById('mark-area').style.display = 'block';
+  }
+}
+
+function answerMicro(selected, correct, explanation, lessonKey) {
+  const opts = document.querySelectorAll('.micro-opt');
+  const fb   = document.getElementById('micro-feedback');
+  opts.forEach((btn, idx) => {
+    btn.disabled = true;
+    if (idx === correct) btn.classList.add('correct');
+    else if (idx === selected && selected !== correct) btn.classList.add('wrong');
+    else if (idx === correct && selected !== correct) btn.classList.add('reveal');
+  });
+
+  const isCorrect = selected === correct;
+  fb.className = `micro-feedback show ${isCorrect ? 'correct' : 'wrong'}`;
+  fb.innerHTML = `<strong>${isCorrect ? '✓ Correct!' : '✗ Not quite.'}</strong>${explanation ? `<br><span style="color:var(--text);font-size:.82rem;">${explanation}</span>` : ''}`;
+
+  // Show mark-complete after answering
+  const markArea = document.getElementById('mark-area');
+  if (markArea) markArea.style.display = 'block';
+
+  // Auto-mark complete if correct
+  if (isCorrect && !completedKeys.has(lessonKey)) {
+    setTimeout(() => markComplete(lessonKey, true), 600);
+  }
+}
+
+// ── Mark lesson complete ───────────────────────────────────────────────────────
+function markComplete(key, auto = false) {
+  if (completedKeys.has(key)) return;
+  completedKeys.add(key);
+  localStorage.setItem('sp_read_lessons', JSON.stringify([...completedKeys]));
+
+  // Update button state
+  const btn = document.getElementById('mark-btn');
+  if (btn) { btn.textContent = '✓ Completed'; btn.classList.add('done'); btn.disabled = true; }
+
+  updateProgress();
+  renderGrid(getFiltered());
+
+  // XP popup
+  if (!auto) showXpPopup('+10 XP');
+  else showXpPopup('✓ +10 XP');
+
+  // Sync to server (best-effort)
+  const lessonId = (LESSONS.find(l => l.key === key) || {}).id;
+  if (lessonId) {
+    fetch(`${API_BASE}/lessons/${lessonId}/read`, {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+    }).catch(() => {});
+  }
+}
+
+function showXpPopup(text) {
+  const el = document.createElement('div');
+  el.className = 'xp-popup';
+  el.textContent = text;
+  el.style.cssText = `left:50%;top:40%;margin-left:-40px;`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 950);
+}
+
+function updateProgress() {
+  const total = LESSONS.length;
+  const done  = completedKeys.size;
+  document.getElementById('read-count').textContent = `${done} / ${total}`;
+  document.getElementById('progress-fill').style.width = total ? `${(done/total)*100}%` : '0%';
+}
+
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+function closeModalOutside(e) { if (e.target.id === 'modal-overlay') closeModal(); }
+
+// ── Nav: auth-aware (no admin link — admin has their own dashboard) ─────────────
+(function() {
+  const username  = localStorage.getItem('sp_username');
+  const loginLink = document.getElementById('nav-login-link');
+  if (!loginLink || !username) return;
+  loginLink.style.display = 'none';
+  const logoutBtn = document.createElement('a');
+  logoutBtn.href = '#'; logoutBtn.textContent = 'Log out';
+  logoutBtn.style.cssText = 'margin-left:1.5rem;color:var(--red);font-family:\'DM Mono\',monospace;font-size:.78rem;letter-spacing:.05em;text-decoration:none;';
+  logoutBtn.onclick = async e => {
+    e.preventDefault();
+    await fetch('/auth/cookie-logout', { method:'POST', credentials:'include' }).catch(()=>{});
+    localStorage.clear();
+    window.location.href = 'login.html';
+  };
+  loginLink.insertAdjacentElement('afterend', logoutBtn);
+})();
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+loadLessons();
+</script>
+</div><!-- /.page-main -->
+<script>
+(function() {
+  const sidebar   = document.getElementById('sidebar');
+  const mainEl    = document.getElementById('page-main');
+  const burgerBtn = document.getElementById('burger-btn');
+  const overlay   = document.getElementById('sidebar-overlay');
+  let sidebarOpen = window.innerWidth >= 900;
+  function initSidebar() {
+    if (window.innerWidth < 900) { sidebar.classList.add('collapsed'); if(mainEl)mainEl.classList.remove('expanded'); burgerBtn.classList.add('visible'); sidebarOpen = false; }
+    else { sidebar.classList.remove('collapsed'); if(mainEl)mainEl.classList.remove('expanded'); burgerBtn.classList.remove('visible'); sidebarOpen = true; }
+  }
+  window.toggleSidebar = function() {
+    sidebarOpen = !sidebarOpen;
+    if (sidebarOpen) { sidebar.classList.remove('collapsed'); if(window.innerWidth>=900&&mainEl)mainEl.classList.remove('expanded'); else overlay.classList.add('visible'); burgerBtn.classList.remove('visible'); }
+    else { sidebar.classList.add('collapsed'); if(mainEl)mainEl.classList.add('expanded'); overlay.classList.remove('visible'); burgerBtn.classList.add('visible'); }
+  };
+  window.addEventListener('resize', initSidebar);
+  initSidebar();
+  const username  = localStorage.getItem('sp_username');
+  const role      = localStorage.getItem('sp_role');
+  const loginLink = document.getElementById('sidebar-login-link');
+  const adminLink = document.getElementById('sidebar-admin-link');
+  if (username) {
+    if (loginLink) {
+      loginLink.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Log out`;
+      loginLink.href = '#'; loginLink.style.color = 'var(--red)';
+      loginLink.onclick = async function(e) { e.preventDefault(); await fetch('/auth/cookie-logout',{method:'POST',credentials:'include'}).catch(()=>{}); localStorage.clear(); window.location.href='login.html'; };
+    }
+    if (role === 'admin' && adminLink) adminLink.style.display = 'flex';
+  }
+})();
+</script>
+</body>
+</html>

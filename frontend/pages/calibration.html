@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="/env-config.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SocialProof — Calibration</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0d0f14;--surface:#13161e;--card:#181c27;--border:#252a3a;--text:#e8eaf0;--muted:#6b7394;--accent:#4f8ef7;--accent2:#a78bfa;--green:#34d399;--red:#f87171;--orange:#fb923c;--yellow:#fbbf24;--sidebar-w:256px;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.5;}
+.grid-bg{position:fixed;inset:0;background-image:linear-gradient(rgba(79,142,247,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(79,142,247,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+
+/* SIDEBAR */
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);z-index:200;display:flex;flex-direction:column;transition:transform .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;}
+.sidebar.collapsed{transform:translateX(calc(-1 * var(--sidebar-w)));}
+.sidebar-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);z-index:190;opacity:0;pointer-events:none;transition:opacity .3s;}
+.sidebar-overlay.visible{opacity:1;pointer-events:all;}
+.sidebar-header{display:flex;align-items:center;justify-content:space-between;padding:1.25rem 1rem 1rem;border-bottom:1px solid var(--border);}
+.sidebar-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.15rem;letter-spacing:-.02em;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-decoration:none;}
+.sidebar-logo span{font-weight:400;-webkit-text-fill-color:rgba(232,234,240,.35);}
+.sidebar-close-btn{width:30px;height:30px;background:transparent;border:1px solid var(--border);border-radius:7px;cursor:pointer;color:var(--muted);display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.sidebar-close-btn:hover{border-color:var(--text);color:var(--text);}
+.sidebar-nav{display:flex;flex-direction:column;padding:.75rem .75rem 0;gap:2px;flex:1;}
+.nav-item{display:flex;align-items:center;gap:.7rem;padding:.6rem .75rem;border-radius:9px;color:var(--muted);text-decoration:none;font-size:.85rem;font-family:'DM Mono',monospace;letter-spacing:.02em;transition:all .2s;}
+.nav-item:hover{background:rgba(255,255,255,.04);color:var(--text);}
+.nav-item.active{background:rgba(79,142,247,.12);color:var(--accent);}
+.nav-item svg{width:16px;height:16px;flex-shrink:0;}
+.nav-divider{height:1px;background:var(--border);margin:.5rem 0;}
+.sidebar-section{padding:.75rem 1rem .3rem;font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;}
+.age-mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;padding:.3rem .75rem 1rem;}
+.age-pill{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:.5rem .3rem;cursor:pointer;color:var(--muted);font-size:.7rem;text-align:center;transition:all .2s;line-height:1.6;}
+.age-pill:hover{border-color:var(--accent);color:var(--accent);}
+.age-pill.active{background:rgba(79,142,247,.12);border-color:var(--accent);color:var(--accent);}
+.sidebar-user{border-top:1px solid var(--border);padding:.75rem 1rem;display:flex;align-items:center;justify-content:space-between;font-size:.8rem;color:var(--muted);}
+.sidebar-username{font-family:'DM Mono',monospace;font-size:.75rem;color:var(--text);}
+.logout-btn{background:transparent;border:1px solid var(--border);border-radius:6px;padding:.3rem .6rem;color:var(--muted);cursor:pointer;font-size:.7rem;transition:all .2s;}
+.logout-btn:hover{border-color:var(--red);color:var(--red);}
+.burger-btn{position:fixed;top:1rem;left:1rem;z-index:180;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:.55rem;cursor:pointer;color:var(--muted);display:none;align-items:center;justify-content:center;transition:all .2s;}
+.burger-btn.visible{display:flex;}
+
+/* MAIN */
+.main{margin-left:var(--sidebar-w);min-height:100vh;transition:margin-left .3s;position:relative;z-index:1;}
+.main.expanded{margin-left:0;}
+.page{max-width:860px;margin:0 auto;padding:2rem 1.5rem 6rem;}
+
+/* PAGE HEADER */
+.page-header{padding:2rem 0 2.5rem;}
+.page-eyebrow{font-family:'DM Mono',monospace;font-size:.7rem;letter-spacing:.12em;color:var(--accent);text-transform:uppercase;margin-bottom:.6rem;}
+.page-title{font-family:'Syne',sans-serif;font-weight:800;font-size:2rem;letter-spacing:-.03em;line-height:1.15;}
+.page-sub{color:var(--muted);font-size:.9rem;margin-top:.5rem;max-width:540px;line-height:1.6;}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.75rem;margin-bottom:1.25rem;animation:fadeUp .35s ease both;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.card-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;margin-bottom:.35rem;}
+.card-sub{font-size:.83rem;color:var(--muted);line-height:1.6;margin-bottom:1.25rem;}
+
+/* SUMMARY ROW */
+.summary-row{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:2rem;}
+.summary-stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;text-align:center;}
+.stat-val{font-family:'Syne',sans-serif;font-weight:700;font-size:2rem;line-height:1;}
+.stat-label{font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:.4rem;}
+.stat-delta{font-size:.75rem;margin-top:.3rem;}
+.delta-up{color:var(--green);}
+.delta-down{color:var(--red);}
+.delta-neu{color:var(--muted);}
+
+/* CALIBRATION CHART */
+.calib-chart-wrap{position:relative;height:200px;margin:1.25rem 0;}
+.calib-chart-wrap canvas{width:100%!important;height:100%!important;}
+.chart-legend{display:flex;gap:1.2rem;flex-wrap:wrap;margin-top:.75rem;}
+.legend-item{display:flex;align-items:center;gap:.4rem;font-family:'DM Mono',monospace;font-size:.7rem;color:var(--muted);}
+.legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
+
+/* CONFIDENCE HISTORY TABLE */
+.history-table{width:100%;border-collapse:collapse;font-size:.82rem;}
+.history-table th{font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:.5rem .75rem;border-bottom:1px solid var(--border);text-align:left;}
+.history-table td{padding:.65rem .75rem;border-bottom:1px solid rgba(37,42,58,.6);vertical-align:middle;}
+.history-table tr:last-child td{border-bottom:none;}
+.conf-badge{display:inline-flex;align-items:center;padding:.2rem .55rem;border-radius:5px;font-family:'DM Mono',monospace;font-size:.65rem;font-weight:500;}
+.conf-very-high{background:rgba(248,113,113,.12);color:var(--red);}
+.conf-high{background:rgba(251,191,36,.1);color:var(--yellow);}
+.conf-medium{background:rgba(79,142,247,.12);color:var(--accent);}
+.conf-low{background:rgba(107,115,148,.15);color:var(--muted);}
+.match-yes{color:var(--green);font-size:.8rem;}
+.match-no{color:var(--red);font-size:.8rem;}
+.truncate{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;}
+
+/* INSIGHT BLOCK */
+.insight-block{background:rgba(167,139,250,.07);border:1px solid rgba(167,139,250,.2);border-radius:11px;padding:1rem 1.1rem;margin-bottom:1rem;}
+.insight-icon{font-size:1.3rem;margin-bottom:.4rem;}
+.insight-title{font-size:.88rem;font-weight:600;margin-bottom:.3rem;}
+.insight-text{font-size:.82rem;color:var(--muted);line-height:1.65;}
+.insight-block.good{background:rgba(52,211,153,.06);border-color:rgba(52,211,153,.2);}
+.insight-block.warn{background:rgba(251,191,36,.06);border-color:rgba(251,191,36,.2);}
+.insight-block.alert{background:rgba(248,113,113,.06);border-color:rgba(248,113,113,.2);}
+
+/* GAUGE */
+.gauge-wrap{display:flex;align-items:center;gap:1.5rem;padding:1.25rem 0;}
+.gauge-svg{flex-shrink:0;}
+.gauge-labels{flex:1;}
+.gauge-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1.25rem;}
+.gauge-sub{font-size:.82rem;color:var(--muted);margin-top:.25rem;line-height:1.5;}
+
+/* EMPTY */
+.empty-state{text-align:center;padding:3rem 1rem;}
+.empty-icon{font-size:2.5rem;margin-bottom:.75rem;}
+.empty-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;margin-bottom:.4rem;}
+.empty-sub{font-size:.83rem;color:var(--muted);}
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.65rem 1.4rem;border-radius:9px;font-size:.85rem;font-weight:500;cursor:pointer;transition:all .2s;border:1px solid transparent;text-decoration:none;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:#3d7de6;}
+.hidden{display:none!important;}
+@media(max-width:640px){.summary-row{grid-template-columns:1fr 1fr;}.page{padding:1.25rem 1rem 5rem;}}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="index.html" class="sidebar-logo">Social<span>Proof</span></a>
+    <button class="sidebar-close-btn" onclick="toggleSidebar()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="index.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>Evaluate
+    </a>
+    <a href="lessons.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Lessons
+    </a>
+    <a href="quiz.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Quiz
+    </a>
+    <a href="prebunking.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Prebunking Lab
+    </a>
+    <a href="calibration.html" class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Calibration
+    </a>
+    <a href="dashboard.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard
+    </a>
+    <div class="nav-divider"></div>
+    <a href="admin.html" class="nav-item hidden" id="sidebar-admin-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Admin
+    </a>
+  </nav>
+  <div class="sidebar-section">Age Mode</div>
+  <div class="age-mode-grid">
+    <button class="age-pill" id="age-kids" onclick="setAgeMode('kids')">🎮<br>Kids</button>
+    <button class="age-pill" id="age-teen" onclick="setAgeMode('teen')">⚡<br>Teen</button>
+    <button class="age-pill active" id="age-adult" onclick="setAgeMode('adult')">📊<br>Adult</button>
+    <button class="age-pill" id="age-older" onclick="setAgeMode('older')">📖<br>Older</button>
+  </div>
+  <div class="sidebar-user">
+    <span class="sidebar-username" id="sidebar-uname">Guest</span>
+    <button class="logout-btn" onclick="doLogout()">Logout</button>
+  </div>
+</aside>
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+<button class="burger-btn" id="burger-btn" onclick="toggleSidebar()">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+</button>
+
+<main class="main" id="main">
+  <div class="page">
+    <div class="page-header">
+      <div class="page-eyebrow">Self-Assessment · Metacognition</div>
+      <h1 class="page-title">Confidence Calibration</h1>
+      <p class="page-sub">How accurate is your confidence? See when your gut feeling matches reality — and when it doesn't.</p>
+    </div>
+
+    <div id="loading-state" style="text-align:center;padding:3rem;color:var(--muted);font-family:'DM Mono',monospace;font-size:.8rem;">Loading your evaluations…</div>
+    <div id="empty-state" class="hidden">
+      <div class="empty-state">
+        <div class="empty-icon">📊</div>
+        <div class="empty-title">No evaluations yet</div>
+        <div class="empty-sub" style="margin-bottom:1.5rem">Complete at least 3 evaluations with a confidence level selected to see your calibration data.</div>
+        <a href="index.html" class="btn btn-primary">Start Evaluating →</a>
+      </div>
+    </div>
+
+    <div id="data-state" class="hidden">
+      <!-- Summary stats -->
+      <div class="summary-row" id="summary-row"></div>
+
+      <!-- Calibration gauge -->
+      <div class="card">
+        <div class="card-title">Calibration Score</div>
+        <div class="card-sub">A well-calibrated evaluator is right about as often as their confidence suggests. 100% = perfect calibration. Below 50% = your confidence is not predicting accuracy.</div>
+        <div class="gauge-wrap">
+          <svg class="gauge-svg" viewBox="0 0 160 90" width="160" height="90">
+            <!-- Background arc -->
+            <path d="M 10 80 A 70 70 0 0 1 150 80" fill="none" stroke="var(--border)" stroke-width="12" stroke-linecap="round"/>
+            <!-- Fill arc -->
+            <path id="gauge-arc" d="M 10 80 A 70 70 0 0 1 150 80" fill="none" stroke="var(--accent)" stroke-width="12" stroke-linecap="round" stroke-dasharray="220" stroke-dashoffset="220" style="transition:stroke-dashoffset 1.2s ease;"/>
+            <!-- Needle -->
+            <line id="gauge-needle" x1="80" y1="80" x2="80" y2="18" stroke="var(--text)" stroke-width="2.5" stroke-linecap="round" style="transform-origin:80px 80px;transform:rotate(0deg);transition:transform 1.2s ease;"/>
+            <circle cx="80" cy="80" r="5" fill="var(--surface)" stroke="var(--text)" stroke-width="2"/>
+            <!-- Labels -->
+            <text x="10" y="96" fill="var(--muted)" font-size="9" font-family="DM Mono">0%</text>
+            <text x="140" y="96" fill="var(--muted)" font-size="9" font-family="DM Mono" text-anchor="end">100%</text>
+            <text id="gauge-label" x="80" y="68" fill="var(--text)" font-size="14" font-family="Syne" font-weight="700" text-anchor="middle">—</text>
+          </svg>
+          <div class="gauge-labels">
+            <div class="gauge-title" id="calib-title">Calculating…</div>
+            <div class="gauge-sub" id="calib-desc"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Insight blocks -->
+      <div id="insights-area"></div>
+
+      <!-- Chart: confidence vs accuracy over time -->
+      <div class="card">
+        <div class="card-title">Confidence vs. Accuracy Over Time</div>
+        <div class="card-sub">Each bar pair shows your stated confidence level vs. whether your label matched the system verdict for that session.</div>
+        <div class="calib-chart-wrap"><canvas id="chart-canvas"></canvas></div>
+        <div class="chart-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>Confidence level</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Label matched</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Label did not match</div>
+        </div>
+      </div>
+
+      <!-- History table -->
+      <div class="card">
+        <div class="card-title">Evaluation History</div>
+        <div class="card-sub">Your last 20 evaluations with confidence levels, sorted by most recent.</div>
+        <div style="overflow-x:auto;">
+          <table class="history-table" id="history-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Content</th>
+                <th>Your Label</th>
+                <th>System Label</th>
+                <th>Confidence</th>
+                <th>Match</th>
+              </tr>
+            </thead>
+            <tbody id="history-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Peer comparison -->
+      <div class="card" id="peer-card">
+        <div class="card-title">How You Compare</div>
+        <div class="card-sub">Anonymous aggregate data from all evaluators who rated the same content pieces.</div>
+        <div id="peer-area"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+const sidebar=document.getElementById('sidebar'),mainEl=document.getElementById('main'),overlay=document.getElementById('sidebar-overlay'),burgerBtn=document.getElementById('burger-btn');
+let sOpen=true;
+function toggleSidebar(){sOpen=!sOpen;if(sOpen){sidebar.classList.remove('collapsed');mainEl.classList.remove('expanded');overlay.classList.remove('visible');burgerBtn.classList.remove('visible');}else{sidebar.classList.add('collapsed');mainEl.classList.add('expanded');overlay.classList.add('visible');burgerBtn.classList.add('visible');}}
+function initSidebar(){if(window.innerWidth<900){sidebar.classList.add('collapsed');mainEl.classList.add('expanded');burgerBtn.classList.add('visible');sOpen=false;}}
+window.addEventListener('resize',initSidebar);initSidebar();
+let currentMode=localStorage.getItem('sp_age_mode')||'adult';
+function setAgeMode(m){currentMode=m;localStorage.setItem('sp_age_mode',m);document.querySelectorAll('.age-pill').forEach(e=>e.classList.remove('active'));document.getElementById('age-'+m)?.classList.add('active');}
+document.getElementById('age-'+currentMode)?.classList.add('active');
+const USER_ID=localStorage.getItem('sp_user_id')?parseInt(localStorage.getItem('sp_user_id')):null;
+const API_BASE = window.__BACKEND_URL__ || '';
+function getSessionToken(){return sessionStorage.getItem('sp_session')||'';}
+async function initSession(){let t=sessionStorage.getItem('sp_session');if(!t){try{const r=await fetch('/auth/session');const d=await r.json();t=d.session_token;}catch{t=Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b=>b.toString(16).padStart(2,'0')).join('');}sessionStorage.setItem('sp_session',t);}}
+function doLogout(){fetch('/auth/cookie-logout',{method:'POST',credentials:'include'}).catch(()=>{});localStorage.clear();sessionStorage.clear();window.location.href='index.html';}
+const uname=localStorage.getItem('sp_username');
+if(uname)document.getElementById('sidebar-uname').textContent=uname;
+if(localStorage.getItem('sp_role')==='admin')document.getElementById('sidebar-admin-link').classList.remove('hidden');
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+const CONF_SCORE={'very_high':1.0,'high':0.75,'medium':0.5,'low':0.25};
+const CONF_LABEL={'very_high':'Very High','high':'High','medium':'Medium','low':'Low'};
+const CONF_CLASS={'very_high':'conf-very-high','high':'conf-high','medium':'conf-medium','low':'conf-low'};
+
+// ── Mock data (used when API unavailable) ─────────────────────────────────────
+function mockEvals(){
+  const labels=['supported','misleading','unverified','neutral'];
+  const confs=['very_high','high','medium','low'];
+  const snippets=[
+    'Local health official confirms outbreak…','New study links sugar to cancer…',
+    'Government to ban social media for minors…','Celebrity shares unverified claim…',
+    'Climate report shows record temperatures…','Viral post about election fraud…',
+    'Popular supplement causes liver damage…','New law will tax all online purchases…',
+    'WHO reverses guidance on exercise…','Community group spreads false warning…',
+  ];
+  return Array.from({length:15},(_,i)=>{
+    const sysLabel=labels[Math.floor(Math.random()*labels.length)];
+    const conf=confs[Math.floor(Math.random()*confs.length)];
+    // Bias: very_high confidence is less accurate to show miscalibration
+    const matchChance=conf==='very_high'?0.45:conf==='high'?0.62:conf==='medium'?0.7:0.6;
+    const match=Math.random()<matchChance;
+    return{
+      id:i+1,
+      content_snippet:snippets[i%snippets.length],
+      user_label:match?sysLabel:labels[(labels.indexOf(sysLabel)+1)%labels.length],
+      system_label:sysLabel,
+      confidence_level:conf,
+      label_match:match,
+      created_at:new Date(Date.now()-(i*86400000*1.5)).toISOString(),
+    };
+  });
+}
+
+// ── Compute calibration stats ─────────────────────────────────────────────────
+function computeStats(evals){
+  const withConf=evals.filter(e=>e.confidence_level&&e.label_match!==undefined&&e.label_match!==null);
+  if(!withConf.length)return null;
+  const total=withConf.length;
+  const correct=withConf.filter(e=>e.label_match).length;
+  const accuracy=correct/total;
+
+  // By confidence level
+  const byConf={};
+  ['very_high','high','medium','low'].forEach(c=>{
+    const grp=withConf.filter(e=>e.confidence_level===c);
+    byConf[c]={n:grp.length,correct:grp.filter(e=>e.label_match).length,rate:grp.length?grp.filter(e=>e.label_match).length/grp.length:null};
+  });
+
+  // Calibration score: how well confidence level predicts accuracy
+  // Perfect calibration = very_high is most accurate, then high, medium, low
+  let calibOk=0,calibChecks=0;
+  if(byConf.very_high.n&&byConf.high.n){calibChecks++;if(byConf.very_high.rate>=byConf.high.rate)calibOk++;}
+  if(byConf.high.n&&byConf.medium.n){calibChecks++;if(byConf.high.rate>=byConf.medium.rate)calibOk++;}
+  if(byConf.medium.n&&byConf.low.n){calibChecks++;if(byConf.medium.rate>=byConf.low.rate)calibOk++;}
+  // Also weigh overall accuracy
+  const calibScore=calibChecks>0?Math.round(((accuracy*0.5)+(calibOk/calibChecks*0.5))*100):Math.round(accuracy*100);
+
+  // Overconfidence: very_high confidence but accuracy <50%
+  const overconfident=byConf.very_high.n>=3&&byConf.very_high.rate<0.5;
+  // Underconfident: low confidence but accuracy >70%
+  const underconfident=byConf.low.n>=3&&byConf.low.rate>0.7;
+  // Best topic (using label match pattern)
+  const vhAccuracy=byConf.very_high.rate||0;
+
+  return{total,correct,accuracy,calibScore,byConf,overconfident,underconfident,vhAccuracy,evals:withConf};
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderSummary(stats){
+  document.getElementById('summary-row').innerHTML=`
+    <div class="summary-stat">
+      <div class="stat-val" style="color:var(--accent)">${stats.total}</div>
+      <div class="stat-label">Evaluations with Confidence</div>
+    </div>
+    <div class="summary-stat">
+      <div class="stat-val" style="color:${stats.accuracy>=.65?'var(--green)':stats.accuracy>=.45?'var(--yellow)':'var(--red)'}">${Math.round(stats.accuracy*100)}%</div>
+      <div class="stat-label">Label Match Rate</div>
+    </div>
+    <div class="summary-stat">
+      <div class="stat-val" style="color:var(--accent2)">${stats.calibScore}%</div>
+      <div class="stat-label">Calibration Score</div>
+    </div>`;
+}
+
+function renderGauge(score){
+  const pct=score/100;
+  // Arc total length ~220 for our path
+  const dash=220;
+  document.getElementById('gauge-arc').style.strokeDashoffset=dash-(dash*pct);
+  const color=score>=75?'var(--green)':score>=50?'var(--yellow)':'var(--red)';
+  document.getElementById('gauge-arc').style.stroke=color;
+  // Needle: -90deg = 0%, 0deg = 50%, +90deg = 100%
+  const deg=-90+(pct*180);
+  document.getElementById('gauge-needle').style.transform=`rotate(${deg}deg)`;
+  document.getElementById('gauge-label').textContent=`${score}%`;
+  const titles={high:'Well Calibrated',mid:'Moderately Calibrated',low:'Poorly Calibrated'};
+  const t=score>=75?'high':score>=50?'mid':'low';
+  document.getElementById('calib-title').textContent=titles[t];
+  document.getElementById('calib-desc').textContent=
+    t==='high'?'Your confidence levels reliably predict when you\'re right. When you say "very high", you usually are.':
+    t==='mid'?'Your confidence is sometimes predictive. There\'s room to improve your sense of when you\'re certain vs. guessing.':
+    'Your stated confidence level is not reliably predicting accuracy. You may be overconfident on hard claims or underconfident on easy ones.';
+}
+
+function renderInsights(stats){
+  const area=document.getElementById('insights-area');
+  const blocks=[];
+  const vh=stats.byConf.very_high;
+  const hi=stats.byConf.high;
+  const me=stats.byConf.medium;
+  const lo=stats.byConf.low;
+
+  if(stats.overconfident){
+    blocks.push({cls:'alert',icon:'⚠️',title:'Overconfidence detected',text:`You marked yourself "Very High" confidence on ${vh.n} evaluations but were only correct ${Math.round(vh.rate*100)}% of the time. This is a common pattern — when a claim aligns with your existing beliefs, it can feel certain even when it isn't. Slow down most when you feel most sure.`});
+  } else if(vh.n>=3&&vh.rate>=0.8){
+    blocks.push({cls:'good',icon:'🎯',title:'Your "Very High" confidence is well-calibrated',text:`When you say you're very confident, you're right ${Math.round(vh.rate*100)}% of the time. That's strong self-awareness about when you've genuinely verified something.`});
+  }
+  if(stats.underconfident){
+    blocks.push({cls:'warn',icon:'💡',title:'You may be underconfident',text:`On ${lo.n} evaluations where you selected "Low" confidence, you were actually correct ${Math.round(lo.rate*100)}% of the time. You know more than you think — trust your analytical process.`});
+  }
+  if(hi.n>=3&&me.n>=3&&hi.rate<me.rate){
+    blocks.push({cls:'warn',icon:'🔄',title:'"High" confidence less accurate than "Medium"',text:`Your "High" confidence evaluations matched the system verdict less often than your "Medium" ones. This suggests your confidence might be inflating when you have partial information rather than full verification.`});
+  }
+  if(stats.accuracy>=0.7&&stats.calibScore>=70){
+    blocks.push({cls:'good',icon:'🛡️',title:'Strong overall performance',text:`You're matching the system verdict ${Math.round(stats.accuracy*100)}% of the time with a calibration score of ${stats.calibScore}%. Consistent analytical process is what separates reliable fact-checkers from lucky guessers.`});
+  }
+  if(!blocks.length){
+    blocks.push({cls:'',icon:'📈',title:'Keep evaluating to see patterns',text:`You need at least 5 evaluations per confidence level to see reliable patterns. Your calibration picture will sharpen as you do more evaluations.`});
+  }
+  area.innerHTML=blocks.map(b=>`
+    <div class="insight-block ${b.cls}">
+      <div class="insight-icon">${b.icon}</div>
+      <div class="insight-title">${b.title}</div>
+      <div class="insight-text">${b.text}</div>
+    </div>`).join('');
+}
+
+function renderChart(stats){
+  const canvas=document.getElementById('chart-canvas');
+  const ctx=canvas.getContext('2d');
+  canvas.width=canvas.offsetWidth*window.devicePixelRatio||700;
+  canvas.height=200*window.devicePixelRatio||200;
+  ctx.scale(window.devicePixelRatio,window.devicePixelRatio);
+  const W=canvas.offsetWidth||700,H=200;
+
+  const data=stats.evals.slice(-15).reverse();
+  if(!data.length)return;
+  const bw=Math.min(24,(W-60)/(data.length*2.5));
+  const gap=bw*0.6;
+  const startX=30;
+
+  ctx.clearRect(0,0,W,H);
+  ctx.font=`10px DM Mono`;
+
+  const colors={'very_high':'rgba(248,113,113,.8)','high':'rgba(251,191,36,.8)','medium':'rgba(79,142,247,.8)','low':'rgba(107,115,148,.5)'};
+  const confH={'very_high':1.0,'high':0.75,'medium':0.5,'low':0.25};
+
+  data.forEach((e,i)=>{
+    const x=startX+i*(bw*2+gap);
+    const confVal=(confH[e.confidence_level]||0.5)*0.9;
+    const confH2=Math.max(4,(H-40)*confVal);
+    // Conf bar
+    ctx.fillStyle=colors[e.confidence_level]||'rgba(107,115,148,.5)';
+    ctx.beginPath();ctx.roundRect(x,H-30-confH2,bw,confH2,3);ctx.fill();
+    // Match bar
+    const matchH=e.label_match?(H-40)*0.7:6;
+    ctx.fillStyle=e.label_match?'rgba(52,211,153,.7)':'rgba(248,113,113,.6)';
+    ctx.beginPath();ctx.roundRect(x+bw+2,H-30-matchH,bw,matchH,3);ctx.fill();
+    // Eval number label
+    ctx.fillStyle='rgba(107,115,148,.6)';
+    ctx.fillText(`${i+1}`,x+bw/2-3,H-12);
+  });
+  // Axis line
+  ctx.strokeStyle='rgba(37,42,58,.8)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(20,H-30);ctx.lineTo(W-10,H-30);ctx.stroke();
+}
+
+function renderTable(evals){
+  const tbody=document.getElementById('history-body');
+  tbody.innerHTML=evals.slice(0,20).map((e,i)=>`
+    <tr>
+      <td style="color:var(--muted);font-family:'DM Mono',monospace;font-size:.75rem">${i+1}</td>
+      <td><div class="truncate" title="${e.content_snippet||''}">${e.content_snippet||'—'}</div></td>
+      <td><span style="font-size:.8rem">${e.user_label||'—'}</span></td>
+      <td><span style="font-size:.8rem">${e.system_label||'—'}</span></td>
+      <td>${e.confidence_level?`<span class="conf-badge ${CONF_CLASS[e.confidence_level]}">${CONF_LABEL[e.confidence_level]}</span>`:'—'}</td>
+      <td>${e.label_match===null||e.label_match===undefined?'—':`<span class="${e.label_match?'match-yes':'match-no'}">${e.label_match?'✓':'✗'}</span>`}</td>
+    </tr>`).join('');
+}
+
+function renderPeer(peerData){
+  const area=document.getElementById('peer-area');
+  if(!peerData||!peerData.length){area.innerHTML=`<div style="color:var(--muted);font-size:.83rem">Peer comparison data not yet available.</div>`;return;}
+  area.innerHTML=peerData.slice(0,4).map(p=>`
+    <div style="display:flex;align-items:center;gap:1rem;padding:.75rem 0;border-bottom:1px solid var(--border);">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.83rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.snippet}</div>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:.2rem">Your label: <strong>${p.your_label}</strong> · Peer majority: <strong>${p.peer_label}</strong></div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-family:'DM Mono',monospace;font-size:.8rem;color:${p.agree?'var(--green)':'var(--orange)'}">${p.agree_pct}% agreed with system</div>
+        <div style="font-size:.7rem;color:var(--muted)">${p.total_raters} raters</div>
+      </div>
+    </div>`).join('');
+}
+
+// ── Main init ─────────────────────────────────────────────────────────────────
+async function init(){
+  await initSession();
+  document.getElementById('loading-state').style.display='block';
+
+  let evals=[];
+  let peerData=[];
+  try{
+    const uid=USER_ID?`&user_id=${USER_ID}`:'';
+    const tok=getSessionToken();
+    const r=await fetch(`${API_BASE}/calibration/data?session_token=${tok}${uid}`);
+    if(r.ok){const d=await r.json();evals=d.evaluations||[];peerData=d.peer_comparisons||[];}
+    else throw new Error('API unavailable');
+  }catch{
+    evals=mockEvals();
+    peerData=[
+      {snippet:'Local health official confirms outbreak…',your_label:'supported',peer_label:'misleading',agree:false,agree_pct:71,total_raters:43},
+      {snippet:'New study links sugar to cancer…',your_label:'unverified',peer_label:'unverified',agree:true,agree_pct:68,total_raters:89},
+      {snippet:'Government to ban social media for minors…',your_label:'misleading',peer_label:'misleading',agree:true,agree_pct:54,total_raters:31},
+    ];
+  }
+
+  document.getElementById('loading-state').style.display='none';
+  const withConf=evals.filter(e=>e.confidence_level);
+  if(withConf.length<3){document.getElementById('empty-state').classList.remove('hidden');return;}
+
+  const stats=computeStats(evals);
+  if(!stats){document.getElementById('empty-state').classList.remove('hidden');return;}
+
+  document.getElementById('data-state').classList.remove('hidden');
+  renderSummary(stats);
+  setTimeout(()=>renderGauge(stats.calibScore),100);
+  renderInsights(stats);
+  setTimeout(()=>renderChart(stats),150);
+  renderTable(stats.evals);
+  renderPeer(peerData);
+}
+init();
+</script>
+</body>
+</html>

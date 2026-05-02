@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Env files
+.env
+*.env.local
+
+# Data files (too large for git — store in cloud storage)
+data/embeddings.faiss
+data/embeddings_factcheck.faiss
+data/embeddings_news.faiss
+data/embeddings_stats.faiss
+data/corpus.db
+data/sentences_meta*.json
+
+# IDE
+.idea/
+.vscode/
+
+# Node
+node_modules/
