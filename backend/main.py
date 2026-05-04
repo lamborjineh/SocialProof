@@ -170,14 +170,30 @@ async def health():
     from pipeline.pdf_input import is_pdf_available
     pdf_status = is_pdf_available()
 
+    # ── Database connectivity check ───────────────────────────────────────────
+    db_status = "disconnected"
+    db_detail = None
+    try:
+        from database.models import engine
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            result = conn.execute(text("SELECT 1"))
+            result.fetchone()
+        db_status = "connected"
+    except Exception as e:
+        db_status = "disconnected"
+        db_detail = str(e)
+        logger.error(f"[Health] Database check failed: {e}")
+
     return {
-        "status":    "ok",
-        "timestamp": datetime.utcnow().isoformat(),
+        "status":      "ok",
+        "timestamp":   datetime.utcnow().isoformat(),
+        "database":    db_status,
+        **({"database_error": db_detail} if db_detail else {}),
         "index_stale": stale_warning is not None,
-        # H-4: index_stale_msg removed from public response
-        "ollama":    "available" if ollama_ok else "not running (rule-based fallback active)",
-        "ocr":       ocr_status,
-        "pdf":       pdf_status,
+        "ollama":      "available" if ollama_ok else "not running (rule-based fallback active)",
+        "ocr":         ocr_status,
+        "pdf":         pdf_status,
     }
 
 
