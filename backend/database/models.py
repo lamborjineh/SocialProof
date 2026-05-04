@@ -41,7 +41,7 @@ class UserORM(Base):
     username      = Column(String(50),  nullable=False, unique=True)
     email         = Column(String(150), nullable=False, unique=True)
     password_hash = Column(String(255), nullable=False)
-    role          = Column(SAEnum("user", "admin"), nullable=False, default="user")
+    role          = Column(SAEnum("user", "admin", create_constraint=False, native_enum=False), nullable=False, default="user")
     created_at    = Column(DateTime, default=datetime.utcnow)
     updated_at    = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -51,12 +51,12 @@ class EvaluationORM(Base):
     id            = Column(Integer, primary_key=True, autoincrement=True)
     user_id       = Column(Integer, nullable=True)
     session_token = Column(String(64), nullable=False)
-    input_type    = Column(SAEnum("text", "url", "image", "pdf"), default="text")
+    input_type    = Column(SAEnum("text", "url", "image", "pdf", create_constraint=False, native_enum=False), default="text")
     raw_content   = Column(Text, nullable=False)
     parsed_text   = Column(Text, nullable=True)
     system_label  = Column(String(30), nullable=True)
     analysis_json = Column(JSON, nullable=True)
-    status        = Column(SAEnum("pending", "analyzed", "complete"), default="pending")
+    status        = Column(SAEnum("pending", "analyzed", "complete", create_constraint=False, native_enum=False), default="pending")
     created_at    = Column(DateTime, default=datetime.utcnow)
 
 
@@ -88,12 +88,12 @@ class UserEvaluationORM(Base):
     evaluation_id     = Column(Integer, nullable=False)
     user_id           = Column(Integer, nullable=True)
     identified_claims = Column(JSON, nullable=True)
-    source_credible   = Column(SAEnum("yes", "no", "unsure"), nullable=True)
+    source_credible   = Column(SAEnum("yes", "no", "unsure", create_constraint=False, native_enum=False), nullable=True)
     bias_detected     = Column(SmallInteger, nullable=True)
     evidence_assessed = Column(SmallInteger, nullable=True)
     user_score        = Column(Integer, nullable=True)
     user_label        = Column(String(30), nullable=True)
-    confidence_level  = Column(SAEnum("low", "medium", "high"), nullable=True)
+    confidence_level  = Column(SAEnum("low", "medium", "high", create_constraint=False, native_enum=False), nullable=True)
     skipped_steps     = Column(JSON, nullable=True)
     time_spent_seconds = Column(Integer, nullable=True)
     submitted_at      = Column(DateTime, default=datetime.utcnow)
@@ -105,7 +105,7 @@ class ReEvaluationORM(Base):
     user_evaluation_id = Column(Integer, nullable=False)
     revised_score      = Column(Integer, nullable=True)
     revised_label      = Column(String(30), nullable=True)
-    revised_confidence = Column(SAEnum("low", "medium", "high"), nullable=True)
+    revised_confidence = Column(SAEnum("low", "medium", "high", create_constraint=False, native_enum=False), nullable=True)
     revision_notes     = Column(Text, nullable=True)
     revision_trigger   = Column(String(50), nullable=True)
     revised_at         = Column(DateTime, default=datetime.utcnow)
@@ -119,11 +119,11 @@ class LessonORM(Base):
     content                = Column(Text, nullable=False)
     topic                  = Column(
         SAEnum("claim_detection", "source_verification", "bias_detection",
-               "evidence_evaluation", "general"),
+               "evidence_evaluation", "general", create_constraint=False, native_enum=False),
         nullable=False,
     )
     difficulty             = Column(
-        SAEnum("beginner", "intermediate", "advanced"),
+        SAEnum("beginner", "intermediate", "advanced", create_constraint=False, native_enum=False),
         nullable=False, default="beginner",
     )
     mil_skill              = Column(String(50),  nullable=True)
@@ -152,7 +152,7 @@ class QuizQuestionORM(Base):
     explanation   = Column(Text, nullable=True)
     topic         = Column(String(40), nullable=False)
     difficulty    = Column(
-        SAEnum("beginner", "intermediate", "advanced"),
+        SAEnum("beginner", "intermediate", "advanced", create_constraint=False, native_enum=False),
         nullable=True, default="beginner",
     )
 
@@ -175,11 +175,11 @@ class UserSkillProgressORM(Base):
     session_token    = Column(String(64), nullable=True)
     topic            = Column(
         SAEnum("claim_detection", "source_verification", "bias_detection",
-               "evidence_evaluation", "general"),
+               "evidence_evaluation", "general", create_constraint=False, native_enum=False),
         nullable=False,
     )
     current_level    = Column(
-        SAEnum("beginner", "intermediate", "advanced"),
+        SAEnum("beginner", "intermediate", "advanced", create_constraint=False, native_enum=False),
         nullable=False, default="beginner",
     )
     quiz_accuracy_pct = Column(Float, nullable=True)
@@ -193,7 +193,7 @@ class PretestResultORM(Base):
     id            = Column(Integer, primary_key=True, autoincrement=True)
     user_id       = Column(Integer, nullable=True)
     session_token = Column(String(64), nullable=True)
-    phase         = Column(SAEnum("pretest", "posttest"), nullable=False)
+    phase         = Column(SAEnum("pretest", "posttest", create_constraint=False, native_enum=False), nullable=False)
     score_pct     = Column(Integer, nullable=False)
     correct       = Column(Integer, nullable=False)
     total         = Column(Integer, nullable=False)
@@ -219,7 +219,7 @@ class PhpInputLogORM(Base):
     __tablename__ = "php_input_log"
     id            = Column(Integer, primary_key=True, autoincrement=True)
     session_token = Column(String(64), nullable=False)
-    input_type    = Column(SAEnum("text", "url", "image", "pdf"), nullable=False, default="text")
+    input_type    = Column(SAEnum("text", "url", "image", "pdf", create_constraint=False, native_enum=False), nullable=False, default="text")
     raw_content   = Column(Text, nullable=False)
     user_id       = Column(Integer, nullable=True)
     evaluation_id = Column(Integer, nullable=True)
@@ -267,9 +267,29 @@ class MBFCDomainORM(Base):
 def init_mysql_schema():
     """
     Run safe migrations on startup. Every statement is idempotent.
+    - PostgreSQL (Neon): uses Base.metadata.create_all() — dialect-safe, handles
+      all 15 tables automatically via the ORM models defined above.
+    - MySQL: uses the original raw DDL path (CREATE TABLE IF NOT EXISTS + ALTER TABLE).
     Column additions check information_schema before running ALTER TABLE.
     New tables use CREATE TABLE IF NOT EXISTS.
     """
+    is_postgres = DATABASE_URL.startswith("postgresql") or DATABASE_URL.startswith("postgres")
+
+    if is_postgres:
+        # ── PostgreSQL (Neon) — use SQLAlchemy ORM create_all ─────────────────
+        # create_all() is idempotent (checkfirst=True by default).
+        # It creates every table defined as a Base subclass above.
+        # SAEnum columns: SQLAlchemy creates native PostgreSQL ENUM types.
+        # We pass create_constraint=False so they behave like VARCHAR
+        # and don't require separate CREATE TYPE statements.
+        try:
+            logger.info("[Migration] PostgreSQL detected — running Base.metadata.create_all()")
+            Base.metadata.create_all(engine)
+            logger.info("[Migration] All tables created/verified via ORM (PostgreSQL).")
+        except Exception as e:
+            logger.error(f"[Migration] create_all() failed: {e}")
+            raise
+        return  # Skip MySQL-specific DDL below
 
     # ── New tables ────────────────────────────────────────────────────────────
     new_tables_sql = [
