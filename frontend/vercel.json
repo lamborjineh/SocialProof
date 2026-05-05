@@ -2,16 +2,17 @@
   "buildCommand": "bash build.sh",
   "outputDirectory": ".",
   "rewrites": [
-    { "source": "/", "destination": "/pages/index.html" },
-    { "source": "/:page.html", "destination": "/pages/:page.html" }
+    { "source": "/env-config.js", "destination": "/env-config.js" },
+    { "source": "/",              "destination": "/pages/index.html" },
+    { "source": "/:page.html",   "destination": "/pages/:page.html" }
   ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
         { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "DENY" },
-        { "key": "X-XSS-Protection", "value": "1; mode=block" }
+        { "key": "X-Frame-Options",        "value": "DENY" },
+        { "key": "X-XSS-Protection",       "value": "1; mode=block" }
       ]
     }
   ]
